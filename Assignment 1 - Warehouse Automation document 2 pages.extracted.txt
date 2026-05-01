@@ -1,0 +1,120 @@
+
+
+--- PAGE 1 ---
+Project  5:  Warehouse  Automation
+ 
+●  Natai  Ella  -  208768150  ●  Rodion  Novakovskiy  -  336121777  
+Project  Selection  and  Relevance  to  MAS  
+We  selected  “ Project  5:  Swarm  Logistics  &  Warehouse  Automation” ,  which  focuses  on  designing  agents  
+that
+ 
+move
+ 
+items
+ 
+from
+ 
+pickup
+ 
+locations
+ 
+to
+ 
+delivery
+ 
+points
+ 
+in
+ 
+a
+ 
+shared
+ 
+environment.
+ 
+Environment  Characterization  
+The  system  is  modelled  as  a  grid-based  warehouse  of  size X×Y.  Each  cell  may  represent:  
+●  a  free  road  (movement  allowed)  ●  a  pickup  location  ●  a  delivery/storage  location  ●  an  occupied/blocked  cell  (e.g.,  shelves  or  placed  boxes)  
+The  environment  is:  
+●  Cooperative  –  all  agents  share  the  goal  of  completing  deliveries  ●  Discrete  –  actions  occur  in  turns  ●  Partially  observable  –  agents  have  limited  vision  (local  radius)  ●  Dynamic  –  other  agents  and  placed  items  can  change  the  environment  ●  Constrained  –  agents  cannot  occupy  the  same  cell  
+Agent  Model  and  Actions  
+We  begin  with  a  single  agent  type ,  where  each  agent  performs  one  action  per  turn :  
+●  Move  (one  grid  cell)  ●  Pick  up  an  item  ●  Place  an  item  ●  Wait  
+Each  agent  has  a  limited  carrying  capacity  (initially  one  item).  
+The  agent’s  goal  is  to:  
+1.  Collect  an  item  from  a  pickup  point  2.  Identify  its  destination  3.  Navigate  the  grid  4.  Deliver  the  item  
+Future  extensions  may  include  additional  task  types  (e.g.,  retrieving  items  for  dispatch).  
+
+--- PAGE 2 ---
+Task  Allocation  and  Interaction  Strategy  
+Initially,  task  allocation  is  simple:  available  agents  handle  pickup-and-delivery  tasks  as  they  appear.  
+In  multi-agent  scenarios,  this  can  be  extended  into  a  coordination  mechanism  such  as  auction-based  
+allocation
+,
+ 
+where
+ 
+agents
+ 
+choose
+ 
+tasks
+ 
+based
+ 
+on
+ 
+distance
+ 
+or
+ 
+availability.
+ 
+Agents  may  also  include  simple  identifiers  (e.g.,  zones  or  roles)  to  reduce  congestion  and  improve  
+coordination.
+ 
+Pathfinding  and  Conflict  Resolution  
+Agents  must  navigate  the  grid  while  avoiding  obstacles  and  other  agents.  Since  multiple  agents  operate  
+simultaneously,
+ 
+collision
+ 
+avoidance
+ 
+is
+ 
+required
+ 
+(no
+ 
+shared
+ 
+cells).
+ 
+Each  agent  uses  local  information  (limited  vision)  and  may  maintain  an  internal  map  of  explored  areas.  When  
+obstacles
+ 
+or
+ 
+agents
+ 
+block
+ 
+paths,
+ 
+the
+ 
+agent
+ 
+must:
+ 
+●  wait  ●  replan  routes  ●  avoid  occupied  cells  
+Basic  pathfinding  is  used  initially,  with  extensions  to  cooperative  strategies  for  multi-agent  scenarios.  
+Learning  and  Optimization  
+At  later  stages,  agents  may  improve  performance  by:  
+●  remembering  explored  areas  ●  preferring  shorter  or  less  congested  paths  ●  adapting  to  dynamic  obstacles  (e.g.,  placed  boxes)  
+This  allows  gradual  improvement  in  routing  efficiency  and  system  performance.  
+Success  Metrics  
+System  performance  will  be  evaluated  using:  
+●  Completion  time  –  total  steps  to  finish  all  deliveries  ●  Task  completion  rate  –  number  of  successfully  delivered  items  ●  Agent  efficiency  –  ratio  of  useful  actions  vs.  waiting  ●  Collision  avoidance  –  absence  of  conflicts  between  agents  ●  Path  efficiency  –  comparison  to  shortest  paths  ●  Throughput  –  number  of  deliveries  per  time  unit  
+ 

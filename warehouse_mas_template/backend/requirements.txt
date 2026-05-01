@@ -1,0 +1,12 @@
+Flask==3.1.0
+flask-cors==5.0.1
+networkx>=3.4
+numpy>=2.1
+pandas>=2.2
+pydantic>=2.10
+pytest>=8.3
+
+# Repast is the intended MAS framework direction.
+# Prefer installing Repast4Py through conda-forge inside the MAS environment:
+# conda activate MAS
+# conda install -c conda-forge repast4py
