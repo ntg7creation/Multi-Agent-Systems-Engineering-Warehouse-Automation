@@ -82,6 +82,14 @@ def get_items():
     return jsonify(simulation.items())
 
 
+@app.get("/api/items/<item_id>")
+def get_item(item_id: str):
+    item = simulation.item(item_id)
+    if item is None:
+        return jsonify({"error": f"Unknown item '{item_id}'."}), 404
+    return jsonify(item)
+
+
 @app.get("/api/metrics")
 def get_metrics():
     return jsonify(simulation.metrics())
@@ -91,6 +99,12 @@ def get_metrics():
 def get_events():
     limit = optional_int(request.args.get("limit"))
     return jsonify(simulation.events(limit=limit))
+
+
+@app.get("/api/replay")
+def get_replay():
+    limit = optional_int(request.args.get("limit"))
+    return jsonify(simulation.replay(limit=limit))
 
 
 @app.get("/api/scenarios")
@@ -125,6 +139,27 @@ def step():
 def run():
     steps = int_payload("steps", default=10, minimum=1, maximum=1000)
     return jsonify(simulation.step(steps))
+
+
+@app.post("/api/start")
+def start():
+    data = payload()
+    delay_ms = int_payload("delay_ms", default=600, minimum=50, maximum=10000)
+    max_ticks = optional_int(data.get("max_ticks"))
+    return jsonify(simulation.start(delay_ms=delay_ms, max_ticks=max_ticks))
+
+
+@app.post("/api/pause")
+def pause():
+    return jsonify(simulation.pause())
+
+
+@app.post("/api/resume")
+def resume():
+    data = payload()
+    delay_ms = int_payload("delay_ms", default=600, minimum=50, maximum=10000)
+    max_ticks = optional_int(data.get("max_ticks"))
+    return jsonify(simulation.resume(delay_ms=delay_ms, max_ticks=max_ticks))
 
 
 @app.get("/api/autorun")

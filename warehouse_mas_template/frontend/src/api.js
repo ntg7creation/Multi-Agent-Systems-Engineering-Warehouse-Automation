@@ -42,6 +42,31 @@ export function resetSimulation({ scenarioId = 'default', seed } = {}) {
   })
 }
 
+export function loadScenario({ scenarioId = 'default', seed } = {}) {
+  return request('/scenario/load', {
+    method: 'POST',
+    body: JSON.stringify({ scenario_id: scenarioId, seed }),
+  })
+}
+
+export function startSimulation({ delayMs = 600, maxTicks = null } = {}) {
+  return request('/start', {
+    method: 'POST',
+    body: JSON.stringify({ delay_ms: delayMs, max_ticks: maxTicks }),
+  })
+}
+
+export function pauseSimulation() {
+  return request('/pause', { method: 'POST' })
+}
+
+export function resumeSimulation({ delayMs = 600, maxTicks = null } = {}) {
+  return request('/resume', {
+    method: 'POST',
+    body: JSON.stringify({ delay_ms: delayMs, max_ticks: maxTicks }),
+  })
+}
+
 export function startAutorun({ delayMs = 600, maxTicks = null } = {}) {
   return request('/autorun/start', {
     method: 'POST',

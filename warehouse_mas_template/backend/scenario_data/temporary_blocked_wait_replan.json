@@ -1,0 +1,40 @@
+{
+  "scenario_id": "temporary_blocked_wait_replan",
+  "name": "Temporary Blocked Wait And Replan",
+  "description": "Agents in a one-cell-wide passage must wait and replan instead of freezing permanently.",
+  "grid": {
+    "width": 9,
+    "height": 5,
+    "blocked": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4], [5, 4], [6, 4], [7, 4], [8, 4], [0, 1], [0, 2], [0, 3], [8, 1], [8, 2], [8, 3]]
+  },
+  "pickups": {
+    "pickup_left": [1, 2],
+    "pickup_right": [7, 2]
+  },
+  "dropoffs": {
+    "dropoff_left": [1, 1],
+    "dropoff_right": [7, 3]
+  },
+  "agents": [
+    {"agent_id": "agent_1", "position": [2, 2]},
+    {"agent_id": "agent_2", "position": [6, 2]}
+  ],
+  "items": [
+    {"item_id": "box_left", "task_id": "delivery_left", "pickup_id": "pickup_left", "dropoff_id": "dropoff_right"},
+    {"item_id": "box_right", "task_id": "delivery_right", "pickup_id": "pickup_right", "dropoff_id": "dropoff_left"}
+  ],
+  "tasks": [
+    {"task_id": "delivery_left", "pickup_id": "pickup_left", "dropoff_id": "dropoff_right", "item_id": "box_left"},
+    {"task_id": "delivery_right", "pickup_id": "pickup_right", "dropoff_id": "dropoff_left", "item_id": "box_right"}
+  ],
+  "default_seed": 37,
+  "config": {
+    "perception_radius": 4,
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.5,
+      "gamma_failed_route": 2.0,
+      "delta_uncertainty": 0.1
+    }
+  }
+}

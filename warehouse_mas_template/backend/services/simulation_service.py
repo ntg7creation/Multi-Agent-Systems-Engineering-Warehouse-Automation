@@ -54,12 +54,19 @@ class SimulationService:
 
     def task(self, task_id: str) -> Optional[Dict[str, object]]:
         with self._lock:
-            delivery = self._engine.get_delivery(task_id)
-            return delivery.serialize(self._engine.map) if delivery else None
+            task = self._engine.get_task(task_id)
+            return task.serialize(self._engine.map) if task else None
 
     def items(self) -> Dict[str, object]:
         with self._lock:
             return {"items": self._engine.serialize_items()}
+
+    def item(self, item_id: str) -> Optional[Dict[str, object]]:
+        with self._lock:
+            item = self._engine.get_item(item_id)
+            if item is None:
+                return None
+            return item.serialize(self._engine.map, self._engine.item_position(item_id))
 
     def metrics(self) -> Dict[str, object]:
         with self._lock:
@@ -68,6 +75,10 @@ class SimulationService:
     def events(self, limit: Optional[int] = None) -> Dict[str, object]:
         with self._lock:
             return {"events": self._engine.serialize_events(limit=limit)}
+
+    def replay(self, limit: Optional[int] = None) -> Dict[str, object]:
+        with self._lock:
+            return self._engine.serialize_replay(limit=limit)
 
     def step(self, steps: int = 1) -> Dict[str, object]:
         with self._lock:
@@ -89,6 +100,15 @@ class SimulationService:
         self._autorun_thread = Thread(target=self._autorun_loop, daemon=True)
         self._autorun_thread.start()
         return self.autorun_status()
+
+    def start(self, delay_ms: int = 600, max_ticks: Optional[int] = None) -> Dict[str, object]:
+        return self.start_autorun(delay_ms=delay_ms, max_ticks=max_ticks)
+
+    def pause(self) -> Dict[str, object]:
+        return self.stop_autorun()
+
+    def resume(self, delay_ms: int = 600, max_ticks: Optional[int] = None) -> Dict[str, object]:
+        return self.start_autorun(delay_ms=delay_ms, max_ticks=max_ticks)
 
     def stop_autorun(self) -> Dict[str, object]:
         with self._lock:

@@ -16,6 +16,9 @@ class AgentMetrics:
     path_length: int = 0
     completed_tasks: int = 0
     route_replans: int = 0
+    collision_preventions: int = 0
+    path_inefficiency: int = 0
+    total_completion_time: int = 0
 
     def record_action(self, action_type: str, useful: bool = False) -> None:
         self.total_actions += 1
@@ -25,7 +28,7 @@ class AgentMetrics:
             self.wait_actions += 1
         elif action_type == "move":
             self.move_actions += 1
-        elif action_type == "pick":
+        elif action_type in {"pick", "pickup"}:
             self.pick_actions += 1
         elif action_type == "place":
             self.place_actions += 1
@@ -43,6 +46,14 @@ class AgentMetrics:
             "path_length": self.path_length,
             "completed_tasks": self.completed_tasks,
             "route_replans": self.route_replans,
+            "collision_preventions": self.collision_preventions,
+            "path_inefficiency": self.path_inefficiency,
+            "average_delivery_time": round(
+                self.total_completion_time / self.completed_tasks
+                if self.completed_tasks
+                else 0,
+                4,
+            ),
             "efficiency": round(efficiency, 4),
         }
 
@@ -63,13 +74,18 @@ class GlobalMetrics:
     pickup_events: int = 0
     delivery_events: int = 0
     total_completion_time: int = 0
+    collision_preventions: int = 0
+    path_length: int = 0
+    path_inefficiency: int = 0
+    communication_events: int = 0
+    blocked_path_events: int = 0
 
     def record_action(self, action_type: str) -> None:
         if action_type == "wait":
             self.wait_actions += 1
         elif action_type == "move":
             self.move_actions += 1
-        elif action_type == "pick":
+        elif action_type in {"pick", "pickup"}:
             self.pick_actions += 1
         elif action_type == "place":
             self.place_actions += 1
@@ -81,7 +97,7 @@ class GlobalMetrics:
         throughput = self.completed_deliveries / self.total_steps if self.total_steps else 0
         movement_attempts = self.move_actions + self.blocked_move_attempts
         collision_score = (
-            1 - (self.collision_violations / movement_attempts)
+            1 - (self.collision_preventions / movement_attempts)
             if movement_attempts
             else 1
         )
@@ -103,9 +119,14 @@ class GlobalMetrics:
             "place_actions": self.place_actions,
             "blocked_move_attempts": self.blocked_move_attempts,
             "collision_violations": self.collision_violations,
+            "collision_preventions": self.collision_preventions,
             "collision_avoidance_score": round(collision_score, 4),
             "route_replans": self.route_replans,
             "task_assignments": self.task_assignments,
             "pickup_events": self.pickup_events,
             "delivery_events": self.delivery_events,
+            "path_length": self.path_length,
+            "path_inefficiency": self.path_inefficiency,
+            "communication_events": self.communication_events,
+            "blocked_path_events": self.blocked_path_events,
         }

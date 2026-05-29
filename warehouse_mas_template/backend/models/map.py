@@ -6,6 +6,20 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 Position = Tuple[int, int]
 
 
+@dataclass(frozen=True)
+class MapCell:
+    position: Position
+    cell_type: str
+    walkable: bool
+
+    def serialize(self) -> Dict[str, object]:
+        return {
+            "position": self.position,
+            "cell_type": self.cell_type,
+            "walkable": self.walkable,
+        }
+
+
 @dataclass
 class WarehouseMap:
     width: int
@@ -28,6 +42,13 @@ class WarehouseMap:
         if pos in self.dropoffs.values():
             return "dropoff"
         return "road"
+
+    def cell(self, pos: Position) -> MapCell:
+        return MapCell(
+            position=pos,
+            cell_type=self.cell_type(pos),
+            walkable=self.is_walkable(pos),
+        )
 
     def is_blocked(self, pos: Position) -> bool:
         return pos in self.blocked
@@ -61,6 +82,25 @@ class WarehouseMap:
             for candidate in self.adjacent_positions(pos)
             if self.is_walkable(candidate, extra_blocked)
         ]
+
+    def direction_between(self, source: Position, target: Position) -> Optional[str]:
+        dx = target[0] - source[0]
+        dy = target[1] - source[1]
+        if (dx, dy) == (0, -1):
+            return "up"
+        if (dx, dy) == (0, 1):
+            return "down"
+        if (dx, dy) == (-1, 0):
+            return "left"
+        if (dx, dy) == (1, 0):
+            return "right"
+        return None
+
+    def pickup_id_at(self, pos: Position) -> Optional[str]:
+        return next((pickup_id for pickup_id, value in self.pickups.items() if value == pos), None)
+
+    def dropoff_id_at(self, pos: Position) -> Optional[str]:
+        return next((dropoff_id for dropoff_id, value in self.dropoffs.items() if value == pos), None)
 
     @staticmethod
     def manhattan(a: Position, b: Position) -> int:

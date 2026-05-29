@@ -1,117 +1,40 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Dict, Optional
 
 from models.agent import Agent
-from models.delivery import Delivery
-from models.engine import SimulationEngine
+from models.congestion import CongestionConfig, CongestionEstimationModule
+from models.item import Item
 from models.map import WarehouseMap
+from models.movement import PathPlanningConfig, PathPlanningModule
 from models.perception import PerceptionModule
-from models.scenario import AgentStart, DeliveryStart, ScenarioConfig
+from models.scenario import ScenarioConfig, parse_scenario
+from models.task import Task
+from models.engine import SimulationEngine
 
 
-SCENARIOS: Dict[str, ScenarioConfig] = {
-    "default": ScenarioConfig(
-        scenario_id="default",
-        name="Default Two-Agent Warehouse",
-        description="Small baseline scenario with two agents and two delivery tasks.",
-        width=12,
-        height=8,
-        blocked={
-            (3, 1), (3, 2), (3, 3), (3, 5), (3, 6),
-            (7, 1), (7, 2), (7, 4), (7, 5), (7, 6),
-        },
-        pickups={
-            "pickup_a": (1, 1),
-            "pickup_b": (1, 6),
-        },
-        dropoffs={
-            "dropoff_a": (10, 1),
-            "dropoff_b": (10, 6),
-        },
-        agents=[
-            AgentStart(agent_id="agent_1", position=(5, 1)),
-            AgentStart(agent_id="agent_2", position=(5, 6)),
-        ],
-        deliveries=[
-            DeliveryStart(
-                delivery_id="delivery_1",
-                pickup_id="pickup_a",
-                dropoff_id="dropoff_a",
-                box_id="box_1",
-            ),
-            DeliveryStart(
-                delivery_id="delivery_2",
-                pickup_id="pickup_b",
-                dropoff_id="dropoff_b",
-                box_id="box_2",
-            ),
-        ],
-        default_seed=42,
-        perception_radius=3,
-    ),
-    "single_agent": ScenarioConfig(
-        scenario_id="single_agent",
-        name="Single-Agent Baseline",
-        description="One agent completes one delivery in an open warehouse.",
-        width=10,
-        height=6,
-        blocked={(4, 2), (4, 3)},
-        pickups={"pickup_a": (1, 1)},
-        dropoffs={"dropoff_a": (8, 4)},
-        agents=[AgentStart(agent_id="agent_1", position=(2, 1))],
-        deliveries=[
-            DeliveryStart(
-                delivery_id="delivery_1",
-                pickup_id="pickup_a",
-                dropoff_id="dropoff_a",
-                box_id="box_1",
-            ),
-        ],
-        default_seed=7,
-        perception_radius=3,
-    ),
-    "congestion": ScenarioConfig(
-        scenario_id="congestion",
-        name="Congestion And Conflict",
-        description="Three agents share tight routes and must wait or replan.",
-        width=14,
-        height=9,
-        blocked={
-            (5, 1), (5, 2), (5, 3), (5, 5), (5, 6), (5, 7),
-            (8, 1), (8, 2), (8, 3), (8, 5), (8, 6), (8, 7),
-        },
-        pickups={
-            "pickup_a": (1, 1),
-            "pickup_b": (1, 7),
-            "pickup_c": (2, 4),
-        },
-        dropoffs={
-            "dropoff_a": (12, 1),
-            "dropoff_b": (12, 7),
-            "dropoff_c": (11, 4),
-        },
-        agents=[
-            AgentStart(agent_id="agent_1", position=(6, 1)),
-            AgentStart(agent_id="agent_2", position=(6, 7)),
-            AgentStart(agent_id="agent_3", position=(7, 4)),
-        ],
-        deliveries=[
-            DeliveryStart("delivery_1", "pickup_a", "dropoff_a", "box_1"),
-            DeliveryStart("delivery_2", "pickup_b", "dropoff_b", "box_2"),
-            DeliveryStart("delivery_3", "pickup_c", "dropoff_c", "box_3"),
-        ],
-        default_seed=11,
-        perception_radius=4,
-    ),
-}
+SCENARIO_DIR = Path(__file__).parent / "scenario_data"
+
+
+def load_scenario_configs() -> Dict[str, ScenarioConfig]:
+    scenarios: Dict[str, ScenarioConfig] = {}
+    for path in sorted(SCENARIO_DIR.glob("*.json")):
+        with path.open("r", encoding="utf-8") as handle:
+            scenario = parse_scenario(json.load(handle))
+        scenarios[scenario.scenario_id] = scenario
+    if not scenarios:
+        raise RuntimeError(f"No scenario JSON files found in {SCENARIO_DIR}.")
+    return scenarios
 
 
 def build_engine_from_scenario(
     scenario_id: str = "default",
     seed: Optional[int] = None,
 ) -> SimulationEngine:
-    scenario = SCENARIOS.get(scenario_id, SCENARIOS["default"])
+    scenarios = load_scenario_configs()
+    scenario = scenarios.get(scenario_id, scenarios["default"])
     active_seed = scenario.default_seed if seed is None else int(seed)
 
     warehouse_map = WarehouseMap(
@@ -122,42 +45,76 @@ def build_engine_from_scenario(
         dropoffs=dict(scenario.dropoffs),
     )
 
+    path_config = PathPlanningConfig(
+        distance_weight=float(scenario.path_weights.get("alpha_distance", 1.0)),
+        congestion_weight=float(scenario.path_weights.get("beta_congestion", 2.0)),
+        failed_route_weight=float(scenario.path_weights.get("gamma_failed_route", 1.5)),
+        uncertainty_weight=float(scenario.path_weights.get("delta_uncertainty", 0.3)),
+        occupied_penalty=float(scenario.path_weights.get("occupied_penalty", 4.0)),
+        max_candidates=int(scenario.path_weights.get("max_candidates", 6)),
+        near_optimal_margin=float(scenario.path_weights.get("near_optimal_margin", 0.35)),
+    )
+    congestion_config = CongestionConfig(
+        decay=float(scenario.congestion.get("decay", 0.85)),
+        nearby_agent_weight=float(scenario.congestion.get("nearby_agent_weight", 1.2)),
+        waiting_weight=float(scenario.congestion.get("waiting_weight", 0.7)),
+        failed_move_weight=float(scenario.congestion.get("failed_move_weight", 1.0)),
+        blocked_path_weight=float(scenario.congestion.get("blocked_path_weight", 0.9)),
+        communicated_weight=float(scenario.congestion.get("communicated_weight", 0.5)),
+        path_padding=int(scenario.congestion.get("path_padding", 1)),
+    )
+
     agents = [
         Agent(
             agent_id=agent_start.agent_id,
             position=agent_start.position,
             perception_module=PerceptionModule(radius=scenario.perception_radius),
+            path_planning_module=PathPlanningModule(config=path_config),
+            congestion_module=CongestionEstimationModule(config=congestion_config),
         )
         for agent_start in scenario.agents
     ]
 
-    deliveries = [
-        Delivery(
-            delivery_id=delivery_start.delivery_id,
-            pickup_id=delivery_start.pickup_id,
-            dropoff_id=delivery_start.dropoff_id,
-            box_id=delivery_start.box_id,
+    tasks = [
+        Task(
+            task_id=task_start.task_id,
+            pickup_id=task_start.pickup_id,
+            dropoff_id=task_start.dropoff_id,
+            item_id=task_start.item_id,
         )
-        for delivery_start in scenario.deliveries
+        for task_start in scenario.tasks
     ]
+
+    items = {
+        item_start.item_id: Item(
+            item_id=item_start.item_id,
+            task_id=item_start.task_id,
+            pickup_id=item_start.pickup_id,
+            dropoff_id=item_start.dropoff_id,
+        )
+        for item_start in scenario.items
+    }
 
     return SimulationEngine(
         map=warehouse_map,
         agents=agents,
-        deliveries=deliveries,
+        tasks=tasks,
+        items=items,
         seed=active_seed,
         scenario_id=scenario.scenario_id,
         scenario_name=scenario.name,
         allocation_strategy=scenario.allocation_strategy,
         routing_strategy=scenario.routing_strategy,
+        dynamic_changes=scenario.dynamic_changes,
     )
 
 
 def list_scenarios() -> Dict[str, object]:
+    scenarios = load_scenario_configs()
     return {
         "scenarios": [
             scenario.serialize_summary()
-            for scenario in SCENARIOS.values()
+            for scenario in scenarios.values()
         ],
         "default_scenario_id": "default",
     }

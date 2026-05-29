@@ -3,13 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from random import Random
 from typing import Dict, Iterable, List, Optional, Set, Tuple
+from uuid import uuid4
 
-from .action import Action
+from .action import MOVE, PICKUP, PLACE, WAIT, Action, ActionResult
 from .agent import Agent
-from .delivery import Delivery
+from .event_log import EventLogger, ReplayLog
+from .item import Item
 from .map import WarehouseMap
 from .metrics import GlobalMetrics
 from .movement import DIRECTION_VECTORS
+from .task import Task
+from .task_manager import TaskManager
 
 Position = Tuple[int, int]
 
@@ -18,52 +22,119 @@ Position = Tuple[int, int]
 class SimulationEngine:
     map: WarehouseMap
     agents: List[Agent]
-    deliveries: List[Delivery]
+    tasks: List[Task]
+    items: Dict[str, Item]
     seed: int = 1
     scenario_id: str = "default"
     scenario_name: str = "Default Warehouse"
     allocation_strategy: str = "nearest_available"
-    routing_strategy: str = "seeded_bfs"
+    routing_strategy: str = "local_memory_astar"
+    dynamic_changes: List[Dict[str, object]] = field(default_factory=list)
     tick: int = 0
     action_log: List[Dict[str, object]] = field(default_factory=list)
-    event_log: List[Dict[str, object]] = field(default_factory=list)
     metrics: GlobalMetrics = field(default_factory=GlobalMetrics)
     rng: Random = field(init=False)
+    run_id: str = field(init=False)
+    task_manager: TaskManager = field(init=False)
+    event_logger: EventLogger = field(init=False)
+    replay_log: ReplayLog = field(default_factory=ReplayLog)
+    _completion_logged: bool = False
+    _applied_dynamic_changes: Set[int] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         self.rng = Random(self.seed)
-        self.metrics.total_tasks = len(self.deliveries)
+        self.run_id = f"{self.scenario_id}-{uuid4().hex[:8]}"
+        self.task_manager = TaskManager(self.tasks, self.items)
+        self.event_logger = EventLogger(run_id=self.run_id)
+        self.metrics.total_tasks = len(self.tasks)
+        for agent in self.agents:
+            agent.memory_module.initialize_map(self.map.width, self.map.height)
         self.log_event(
-            "simulation_initialized",
+            "SIMULATION_STARTED",
             f"Scenario '{self.scenario_id}' initialized with seed {self.seed}.",
+            result="success",
         )
+        for task in self.tasks:
+            self.log_event(
+                "TASK_CREATED",
+                f"{task.task_id} created for {task.item_id}.",
+                task_id=task.task_id,
+                item_id=task.item_id,
+                target=task.pickup_position(self.map),
+                result="success",
+            )
+
+    @property
+    def deliveries(self) -> List[Task]:
+        return self.tasks
+
+    @property
+    def event_log(self) -> List[Dict[str, object]]:
+        return self.event_logger.events
 
     def step(self) -> Dict[str, object]:
+        if self.is_complete:
+            return self.serialize_state()
+
+        before_state = self._replay_state_snapshot()
         self.tick += 1
         self.metrics.total_steps = self.tick
         self.action_log = []
+        self.log_event("TICK_STARTED", f"Tick {self.tick} started.", result="success")
+
+        self._apply_dynamic_changes()
 
         for agent in self.agents:
             agent.perceive_and_remember(self)
 
         self._communicate_adjacent_agents()
 
-        start_positions = {agent.agent_id: agent.position for agent in self.agents}
-        planned_actions = []
-
         for agent in self.agents:
-            occupied = {
-                pos for other_id, pos in start_positions.items()
-                if other_id != agent.agent_id
-            }
-            action = agent.step(self, occupied)
-            planned_actions.append((agent, action))
+            agent.update_congestion(self.tick)
 
-        reserved_positions: Set[Position] = set()
+        self.task_manager.assign_available_tasks(self)
+
+        planned_actions = []
+        for agent in self.agents:
+            action = agent.select_intended_action(self.tick, self.rng)
+            planned_actions.append((agent, action))
+            self.log_event(
+                "ACTION_SELECTED",
+                f"{agent.agent_id} selected {action.type}.",
+                agent_id=agent.agent_id,
+                task_id=action.task_id,
+                item_id=action.item_id,
+                source=agent.position,
+                target=action.target,
+                result="selected",
+                data=action.serialize(),
+            )
+
+        results = self._validate_and_apply_actions(planned_actions)
         for agent, action in planned_actions:
-            result = self._apply_action(agent, action, reserved_positions)
-            reserved_positions.add(agent.position)
+            result = results[agent.agent_id]
+            agent.receive_action_result(result, self.tick)
             self._record_action(agent, action, result)
+            self._record_action_event(result)
+
+        self.log_event("TICK_COMPLETED", f"Tick {self.tick} completed.", result="success")
+        self.replay_log.record({
+            "run_id": self.run_id,
+            "tick": self.tick,
+            "before": before_state,
+            "intended_actions": [action.serialize() for _, action in planned_actions],
+            "results": [result.serialize() for result in results.values()],
+            "after": self._replay_state_snapshot(),
+            "metrics": self.serialize_metrics(),
+        })
+
+        if self.is_complete and not self._completion_logged:
+            self._completion_logged = True
+            self.log_event(
+                "SIMULATION_COMPLETED",
+                f"Scenario '{self.scenario_id}' completed in {self.tick} ticks.",
+                result="success",
+            )
 
         return self.serialize_state()
 
@@ -78,73 +149,39 @@ class SimulationEngine:
 
     @property
     def is_complete(self) -> bool:
-        return all(delivery.status == "delivered" for delivery in self.deliveries)
+        return bool(self.tasks) and all(task.status == "delivered" for task in self.tasks)
 
-    def assign_task_to_agent(self, agent: Agent) -> Optional[Delivery]:
-        available = [
-            delivery
-            for delivery in self.deliveries
-            if delivery.status in {"waiting", "assigned"}
-            and (
-                delivery.assigned_agent_id is None
-                or delivery.assigned_agent_id == agent.agent_id
-            )
-        ]
-        if not available:
+    def item_position(self, item_id: str) -> Optional[Position]:
+        item = self.items.get(item_id)
+        if item is None:
             return None
+        carrier_position = None
+        if item.carried_by:
+            carrier = self.get_agent(item.carried_by)
+            carrier_position = carrier.position if carrier else None
+        return item.position(self.map, carrier_position)
 
-        ranked = sorted(
-            available,
-            key=lambda delivery: self._task_distance(agent.position, delivery),
-        )
-        chosen = ranked[0]
-        if chosen.assigned_agent_id is None:
-            chosen.assigned_agent_id = agent.agent_id
-            chosen.status = "assigned"
-            chosen.assigned_tick = self.tick
-            self.metrics.task_assignments += 1
-            self.log_event(
-                "task_assigned",
-                f"{chosen.delivery_id} assigned to {agent.agent_id}.",
-                agent_id=agent.agent_id,
-                task_id=chosen.delivery_id,
-                item_id=chosen.box_id,
-                position=agent.position,
-            )
-        return chosen
-
-    def item_position(self, delivery: Delivery) -> Optional[Position]:
-        if delivery.status in {"waiting", "assigned"}:
-            return delivery.pickup_position(self.map)
-        if delivery.status == "carrying":
-            carrier = self.get_agent(delivery.carried_by)
-            return carrier.position if carrier else None
-        if delivery.status == "delivered":
-            return delivery.dropoff_position(self.map)
-        return None
-
-    def item_state(self, delivery: Delivery) -> str:
-        if delivery.status == "assigned":
-            return "waiting"
-        if delivery.status == "carrying":
-            return "carried"
-        return delivery.status
+    def item_state(self, item_id: str) -> str:
+        item = self.items.get(item_id)
+        return item.state if item else "unknown"
 
     def get_agent(self, agent_id: Optional[str]) -> Optional[Agent]:
         if agent_id is None:
             return None
         return next((agent for agent in self.agents if agent.agent_id == agent_id), None)
 
-    def get_delivery(self, delivery_id: Optional[str]) -> Optional[Delivery]:
-        if delivery_id is None:
-            return None
-        return next(
-            (delivery for delivery in self.deliveries if delivery.delivery_id == delivery_id),
-            None,
-        )
+    def get_task(self, task_id: Optional[str]) -> Optional[Task]:
+        return self.task_manager.get_task(task_id)
+
+    def get_delivery(self, delivery_id: Optional[str]) -> Optional[Task]:
+        return self.get_task(delivery_id)
+
+    def get_item(self, item_id: Optional[str]) -> Optional[Item]:
+        return self.task_manager.get_item(item_id)
 
     def serialize_state(self) -> Dict[str, object]:
         return {
+            "run_id": self.run_id,
             "tick": self.tick,
             "seed": self.seed,
             "scenario": self.serialize_scenario_info(),
@@ -157,19 +194,18 @@ class SimulationEngine:
             "boxes": self.serialize_items(),
             "items": self.serialize_items(),
             "actions": self.action_log,
-            "events": self.serialize_events(limit=25),
+            "events": self.serialize_events(limit=35),
             "metrics": self.serialize_metrics(),
         }
 
     def serialize_board(self) -> Dict[str, object]:
-        agents_by_position = {
-            agent.position: agent.agent_id
-            for agent in self.agents
-        }
+        agents_by_position = {agent.position: agent.agent_id for agent in self.agents}
         items_by_position: Dict[Position, List[str]] = {}
         for item in self.serialize_items():
-            position = tuple(item["position"])
-            items_by_position.setdefault(position, []).append(item["item_id"])
+            position = item.get("position")
+            if position is None:
+                continue
+            items_by_position.setdefault(tuple(position), []).append(str(item["item_id"]))
 
         rows = []
         for y in range(self.map.height):
@@ -182,6 +218,8 @@ class SimulationEngine:
                     "walkable": self.map.is_walkable(position),
                     "agent_id": agents_by_position.get(position),
                     "item_ids": items_by_position.get(position, []),
+                    "pickup_id": self.map.pickup_id_at(position),
+                    "dropoff_id": self.map.dropoff_id_at(position),
                 })
             rows.append(row)
         return {
@@ -195,27 +233,26 @@ class SimulationEngine:
         return agent.serialize(include_memory=include_memory) if agent else None
 
     def serialize_tasks(self) -> List[Dict[str, object]]:
-        return [delivery.serialize(self.map) for delivery in self.deliveries]
+        return [task.serialize(self.map) for task in self.tasks]
 
     def serialize_items(self) -> List[Dict[str, object]]:
         items = []
-        for delivery in self.deliveries:
-            position = self.item_position(delivery)
-            if position is None:
-                continue
-            items.append({
-                "item_id": delivery.box_id,
-                "box_id": delivery.box_id,
-                "task_id": delivery.delivery_id,
-                "delivery_id": delivery.delivery_id,
-                "position": position,
-                "state": self.item_state(delivery),
-                "assigned_agent_id": delivery.assigned_agent_id,
-                "carried_by": delivery.carried_by,
-            })
+        for item in self.items.values():
+            carrier_position = None
+            if item.carried_by:
+                carrier = self.get_agent(item.carried_by)
+                carrier_position = carrier.position if carrier else None
+            serialized = item.serialize(self.map, carrier_position)
+            task = self.get_task(item.task_id)
+            serialized["assigned_agent_id"] = task.assigned_agent_id if task else None
+            items.append(serialized)
         return items
 
     def serialize_metrics(self) -> Dict[str, object]:
+        self.metrics.route_replans = max(
+            self.metrics.route_replans,
+            sum(agent.metrics.route_replans for agent in self.agents),
+        )
         return {
             "global": self.metrics.serialize(),
             "agents": {
@@ -225,9 +262,10 @@ class SimulationEngine:
         }
 
     def serialize_events(self, limit: Optional[int] = None) -> List[Dict[str, object]]:
-        if limit is None or limit <= 0:
-            return list(self.event_log)
-        return self.event_log[-limit:]
+        return self.event_logger.serialize(limit=limit)
+
+    def serialize_replay(self, limit: Optional[int] = None) -> Dict[str, object]:
+        return {"frames": self.replay_log.serialize(limit=limit)}
 
     def serialize_scenario_info(self) -> Dict[str, object]:
         return {
@@ -244,219 +282,384 @@ class SimulationEngine:
         agent_id: Optional[str] = None,
         task_id: Optional[str] = None,
         item_id: Optional[str] = None,
-        position: Optional[Position] = None,
+        source: Optional[Position] = None,
+        target: Optional[Position] = None,
+        result: Optional[str] = None,
+        rejection_reason: str = "",
         data: Optional[Dict[str, object]] = None,
+        position: Optional[Position] = None,
     ) -> None:
-        self.event_log.append({
-            "event_id": len(self.event_log) + 1,
-            "tick": self.tick,
-            "type": event_type,
-            "agent_id": agent_id,
-            "task_id": task_id,
-            "item_id": item_id,
-            "position": position,
-            "message": message,
-            "data": data or {},
-        })
+        self.event_logger.log(
+            tick=self.tick,
+            event_type=event_type,
+            message=message,
+            agent_id=agent_id,
+            task_id=task_id,
+            item_id=item_id,
+            source=source if source is not None else position,
+            target=target,
+            result=result,
+            rejection_reason=rejection_reason,
+            data=data,
+        )
 
-    def _apply_action(
+    def _validate_and_apply_actions(
         self,
-        agent: Agent,
-        action: Action,
-        reserved_positions: Set[Position],
-    ) -> Dict[str, object]:
-        if action.type == "move":
-            return self._apply_move(agent, action, reserved_positions)
-        if action.type == "pick":
-            return self._apply_pick(agent, action)
-        if action.type == "place":
-            return self._apply_place(agent, action)
-        agent.state = "waiting" if action.reason else agent.state
-        return {
-            "success": action.type == "wait",
-            "useful": False,
-            "failure_reason": "" if action.type == "wait" else "unknown_action",
-        }
+        planned_actions: List[Tuple[Agent, Action]],
+    ) -> Dict[str, ActionResult]:
+        results: Dict[str, ActionResult] = {}
+        move_targets: Dict[str, Position] = {}
+        initial_positions = {agent.agent_id: agent.position for agent in self.agents}
+        occupant_by_position = {position: agent_id for agent_id, position in initial_positions.items()}
 
-    def _apply_move(
+        for agent, action in planned_actions:
+            if action.type == MOVE:
+                target = self._move_target(agent, action)
+                if target is None:
+                    results[agent.agent_id] = self._reject(agent, action, "invalid_move_direction")
+                    continue
+                if not self.map.in_bounds(target):
+                    results[agent.agent_id] = self._reject(agent, action, "out_of_bounds", target)
+                    continue
+                if not self.map.is_walkable(target):
+                    reason = "blocked_cell" if self.map.is_blocked(target) else "non_walkable_service_cell"
+                    results[agent.agent_id] = self._reject(agent, action, reason, target)
+                    continue
+                move_targets[agent.agent_id] = target
+
+        target_counts: Dict[Position, int] = {}
+        for target in move_targets.values():
+            target_counts[target] = target_counts.get(target, 0) + 1
+
+        for agent_id, target in move_targets.items():
+            if agent_id in results:
+                continue
+            if target_counts[target] > 1:
+                agent = self.get_agent(agent_id)
+                results[agent_id] = self._reject(agent, self._action_for(planned_actions, agent_id), "target_cell_conflict", target)
+
+        for agent_id, target in move_targets.items():
+            if agent_id in results:
+                continue
+            occupant_id = occupant_by_position.get(target)
+            if not occupant_id:
+                continue
+            occupant_target = move_targets.get(occupant_id)
+            if occupant_target == initial_positions[agent_id]:
+                agent = self.get_agent(agent_id)
+                results[agent_id] = self._reject(agent, self._action_for(planned_actions, agent_id), "swap_conflict", target)
+                occupant = self.get_agent(occupant_id)
+                if occupant and occupant_id not in results:
+                    results[occupant_id] = self._reject(occupant, self._action_for(planned_actions, occupant_id), "swap_conflict", occupant_target)
+            elif occupant_id in results or occupant_id not in move_targets:
+                agent = self.get_agent(agent_id)
+                results[agent_id] = self._reject(agent, self._action_for(planned_actions, agent_id), "target_occupied", target)
+
+        for agent, action in planned_actions:
+            if agent.agent_id in results:
+                continue
+            if action.type == MOVE:
+                target = move_targets[agent.agent_id]
+                source = agent.position
+                agent.position = target
+                agent.mode = "moving_to_delivery" if agent.carrying_item_id else "moving_to_pickup"
+                agent.metrics.path_length += 1
+                self.metrics.path_length += 1
+                task = self.get_task(agent.current_task_id)
+                if task:
+                    task.actual_path_length += 1
+                results[agent.agent_id] = ActionResult(
+                    agent_id=agent.agent_id,
+                    action=action,
+                    success=True,
+                    useful=True,
+                    source_position=source,
+                    target_position=target,
+                    task_id=action.task_id,
+                    item_id=action.item_id,
+                )
+            elif action.type == PICKUP:
+                results[agent.agent_id] = self._apply_pickup(agent, action)
+            elif action.type == PLACE:
+                results[agent.agent_id] = self._apply_place(agent, action)
+            elif action.type == WAIT:
+                agent.mode = "waiting" if action.reason else agent.mode
+                results[agent.agent_id] = ActionResult(
+                    agent_id=agent.agent_id,
+                    action=action,
+                    success=True,
+                    useful=False,
+                    source_position=agent.position,
+                    target_position=action.target,
+                    task_id=action.task_id,
+                    item_id=action.item_id,
+                )
+            else:
+                results[agent.agent_id] = self._reject(agent, action, "unknown_action", action.target)
+
+        return results
+
+    def _apply_pickup(self, agent: Agent, action: Action) -> ActionResult:
+        task = self.get_task(action.task_id or agent.current_task_id)
+        if task is None:
+            return self._reject(agent, action, "unknown_task", action.target)
+        pickup = task.pickup_position(self.map)
+        if task.assigned_agent_id != agent.agent_id:
+            return self._reject(agent, action, "task_not_assigned_to_agent", pickup)
+        if task.status not in {"waiting", "assigned"}:
+            return self._reject(agent, action, "task_not_waiting_for_pickup", pickup)
+        if agent.carrying_item_id is not None:
+            return self._reject(agent, action, "agent_already_carrying_item", pickup)
+        if agent.position not in self.map.adjacent_walkable_positions(pickup):
+            return self._reject(agent, action, "agent_not_adjacent_to_pickup", pickup)
+
+        self.task_manager.mark_picked(task, agent.agent_id, self.tick)
+        agent.carrying_item_id = task.item_id
+        agent.mode = "carrying_item"
+        agent.replanning_flag = True
+        agent.memory_module.remember_task(task.serialize(self.map), self.tick)
+        agent.memory_module.remember_item(self.items[task.item_id].serialize(self.map, agent.position), self.tick)
+        self.metrics.pickup_events += 1
+        return ActionResult(
+            agent_id=agent.agent_id,
+            action=action,
+            success=True,
+            useful=True,
+            source_position=agent.position,
+            target_position=pickup,
+            task_id=task.task_id,
+            item_id=task.item_id,
+        )
+
+    def _apply_place(self, agent: Agent, action: Action) -> ActionResult:
+        task = self.get_task(action.task_id or agent.current_task_id)
+        if task is None:
+            return self._reject(agent, action, "unknown_task", action.target)
+        dropoff = task.dropoff_position(self.map)
+        if task.status != "carrying" or task.carried_by != agent.agent_id:
+            return self._reject(agent, action, "task_not_carried_by_agent", dropoff)
+        if agent.carrying_item_id != task.item_id:
+            return self._reject(agent, action, "carried_item_mismatch", dropoff)
+        if agent.position not in self.map.adjacent_walkable_positions(dropoff):
+            return self._reject(agent, action, "agent_not_adjacent_to_delivery", dropoff)
+
+        self.task_manager.mark_delivered(task, self.tick)
+        task.shortest_path_length = self._shortest_service_distance(task)
+        completion_time = self.tick - task.created_tick
+        agent.carrying_item_id = None
+        agent.metrics.completed_tasks += 1
+        agent.metrics.total_completion_time += completion_time
+        agent.metrics.path_inefficiency += task.path_inefficiency
+        self.metrics.completed_deliveries += 1
+        self.metrics.delivery_events += 1
+        self.metrics.total_completion_time += completion_time
+        self.metrics.path_inefficiency += task.path_inefficiency
+        agent.memory_module.remember_task(task.serialize(self.map), self.tick)
+        agent.memory_module.remember_item(self.items[task.item_id].serialize(self.map, dropoff), self.tick)
+        agent.clear_task()
+        return ActionResult(
+            agent_id=agent.agent_id,
+            action=action,
+            success=True,
+            useful=True,
+            source_position=agent.position,
+            target_position=dropoff,
+            task_id=task.task_id,
+            item_id=task.item_id,
+        )
+
+    def _reject(
         self,
-        agent: Agent,
+        agent: Optional[Agent],
         action: Action,
-        reserved_positions: Set[Position],
-    ) -> Dict[str, object]:
-        if action.direction not in DIRECTION_VECTORS:
+        reason: str,
+        target: Optional[Position] = None,
+    ) -> ActionResult:
+        if agent and action.type == MOVE:
             self.metrics.blocked_move_attempts += 1
             self.metrics.route_replans += 1
             agent.metrics.blocked_move_attempts += 1
             agent.metrics.route_replans += 1
-            agent.state = "waiting"
-            self.log_event(
-                "route_blocked",
-                f"{agent.agent_id} could not find a valid route and will replan next tick.",
-                agent_id=agent.agent_id,
-                position=agent.position,
-                data={"reason": action.reason},
-            )
-            return {
-                "success": False,
-                "useful": False,
-                "failure_reason": action.reason or "no_valid_direction",
-            }
-
-        dx, dy = DIRECTION_VECTORS[action.direction]
-        next_position = (agent.position[0] + dx, agent.position[1] + dy)
-        occupied_by_other = {
-            other.position
-            for other in self.agents
-            if other.agent_id != agent.agent_id
-        }
-        blocked_positions = reserved_positions | occupied_by_other
-
-        if self.map.is_walkable(next_position, extra_blocked=blocked_positions):
-            agent.position = next_position
-            agent.metrics.path_length += 1
-            agent.state = (
-                "carrying_item"
-                if agent.carrying_box_id
-                else "moving_to_pickup"
-            )
-            return {"success": True, "useful": True}
-
-        self.metrics.blocked_move_attempts += 1
-        self.metrics.route_replans += 1
-        agent.metrics.blocked_move_attempts += 1
-        agent.metrics.route_replans += 1
-        agent.state = "waiting"
-        failure_reason = "move_target_unavailable"
-        if next_position in occupied_by_other or next_position in reserved_positions:
-            self.metrics.collision_violations += 1
-            failure_reason = "target_occupied_or_reserved"
-        self.log_event(
-            "move_rejected",
-            f"{agent.agent_id} was blocked from moving to {next_position} and will replan next tick.",
-            agent_id=agent.agent_id,
-            position=agent.position,
-            data={
-                "next_position": next_position,
-                "direction": action.direction,
-                "failure_reason": failure_reason,
-            },
+            if reason in {"target_cell_conflict", "swap_conflict", "target_occupied"}:
+                self.metrics.collision_preventions += 1
+                self.metrics.collision_violations += 1
+                agent.metrics.collision_preventions += 1
+            if target:
+                agent.memory_module.record_failed_move(target, self.tick)
+        return ActionResult(
+            agent_id=agent.agent_id if agent else str(action.agent_id),
+            action=action,
+            success=False,
+            useful=False,
+            failure_reason=reason,
+            source_position=agent.position if agent else action.source,
+            target_position=target if target is not None else action.target,
+            task_id=action.task_id,
+            item_id=action.item_id,
         )
-        return {"success": False, "useful": False, "failure_reason": failure_reason}
-
-    def _apply_pick(self, agent: Agent, action: Action) -> Dict[str, object]:
-        delivery = self.get_delivery(agent.goal_holder.target_delivery_id)
-        if (
-            delivery
-            and delivery.status in {"waiting", "assigned"}
-            and delivery.assigned_agent_id == agent.agent_id
-            and agent.carrying_box_id is None
-            and agent.position in self.map.adjacent_positions(delivery.pickup_position(self.map))
-        ):
-            delivery.status = "carrying"
-            delivery.carried_by = agent.agent_id
-            delivery.picked_tick = self.tick
-            agent.carrying_box_id = delivery.box_id
-            agent.state = "carrying_item"
-            self.metrics.pickup_events += 1
-            self.log_event(
-                "item_picked",
-                f"{agent.agent_id} picked {delivery.box_id}.",
-                agent_id=agent.agent_id,
-                task_id=delivery.delivery_id,
-                item_id=delivery.box_id,
-                position=agent.position,
-            )
-            return {"success": True, "useful": True}
-
-        self.log_event(
-            "pickup_rejected",
-            f"{agent.agent_id} could not pick up an item and will re-evaluate next tick.",
-            agent_id=agent.agent_id,
-            position=agent.position,
-        )
-        agent.state = "waiting"
-        return {"success": False, "useful": False, "failure_reason": "pickup_conditions_not_met"}
-
-    def _apply_place(self, agent: Agent, action: Action) -> Dict[str, object]:
-        delivery = self.get_delivery(agent.goal_holder.target_delivery_id)
-        if (
-            delivery
-            and delivery.status == "carrying"
-            and delivery.carried_by == agent.agent_id
-            and agent.carrying_box_id == delivery.box_id
-            and agent.position in self.map.adjacent_positions(delivery.dropoff_position(self.map))
-        ):
-            delivery.status = "delivered"
-            delivery.carried_by = None
-            delivery.delivered_tick = self.tick
-            agent.carrying_box_id = None
-            agent.goal_holder.clear()
-            agent.state = "idle"
-            agent.metrics.completed_tasks += 1
-            self.metrics.completed_deliveries += 1
-            self.metrics.delivery_events += 1
-            self.metrics.total_completion_time += self.tick - delivery.created_tick
-            self.log_event(
-                "item_delivered",
-                f"{agent.agent_id} delivered {delivery.box_id}.",
-                agent_id=agent.agent_id,
-                task_id=delivery.delivery_id,
-                item_id=delivery.box_id,
-                position=agent.position,
-            )
-            return {"success": True, "useful": True}
-
-        self.log_event(
-            "place_rejected",
-            f"{agent.agent_id} could not place an item and will re-evaluate next tick.",
-            agent_id=agent.agent_id,
-            position=agent.position,
-        )
-        agent.state = "waiting"
-        return {"success": False, "useful": False, "failure_reason": "place_conditions_not_met"}
 
     def _record_action(
         self,
         agent: Agent,
         action: Action,
-        result: Dict[str, object],
+        result: ActionResult,
     ) -> None:
-        useful = bool(result.get("useful"))
         self.metrics.record_action(action.type)
-        agent.metrics.record_action(action.type, useful=useful)
+        agent.metrics.record_action(action.type, useful=result.useful)
         self.action_log.append({
             "agent_id": agent.agent_id,
             "action": action.type,
             "direction": action.direction,
             "target": action.target,
+            "source": result.source_position,
             "reason": action.reason,
-            "success": bool(result.get("success")),
-            "failure_reason": result.get("failure_reason", ""),
+            "success": result.success,
+            "failure_reason": result.failure_reason,
             "position": agent.position,
             "goal_type": agent.goal_holder.goal_type,
             "goal_delivery_id": agent.goal_holder.target_delivery_id,
             "goal_task_id": agent.goal_holder.target_delivery_id,
+            "result": result.serialize(),
         })
+
+    def _record_action_event(self, result: ActionResult) -> None:
+        action = result.action
+        event_type = {
+            MOVE: "MOVE_SUCCEEDED" if result.success else "MOVE_REJECTED",
+            PICKUP: "PICKUP_SUCCEEDED" if result.success else "PICKUP_REJECTED",
+            PLACE: "DELIVERY_SUCCEEDED" if result.success else "PLACE_REJECTED",
+            WAIT: "WAIT_ACTION",
+        }.get(action.type, "ACTION_VALIDATION_RESULT")
+        if action.type == WAIT:
+            self.metrics.wait_actions += 0
+        if not result.success and action.type == MOVE:
+            self.metrics.blocked_path_events += 1
+            self.log_event(
+                "BLOCKED_PATH_DETECTED",
+                f"{result.agent_id} could not move to {result.target_position}.",
+                agent_id=result.agent_id,
+                task_id=result.task_id,
+                item_id=result.item_id,
+                source=result.source_position,
+                target=result.target_position,
+                result="rejected",
+                rejection_reason=result.failure_reason,
+            )
+        self.log_event(
+            event_type,
+            self._result_message(result),
+            agent_id=result.agent_id,
+            task_id=result.task_id,
+            item_id=result.item_id,
+            source=result.source_position,
+            target=result.target_position,
+            result="success" if result.success else "rejected",
+            rejection_reason=result.failure_reason,
+            data=result.serialize(),
+        )
+        if action.type == PLACE and result.success:
+            self.log_event(
+                "TASK_COMPLETED",
+                f"{result.task_id} completed by {result.agent_id}.",
+                agent_id=result.agent_id,
+                task_id=result.task_id,
+                item_id=result.item_id,
+                source=result.source_position,
+                target=result.target_position,
+                result="success",
+                data=result.serialize(),
+            )
 
     def _communicate_adjacent_agents(self) -> None:
         for index, agent in enumerate(self.agents):
             for other in self.agents[index + 1:]:
                 if self.map.manhattan(agent.position, other.position) != 1:
                     continue
-                result = agent.communication_module.exchange_with(agent, other)
-                if result["owner_updates"] or result["other_updates"]:
-                    self.log_event(
-                        "agents_communicated",
-                        f"{agent.agent_id} exchanged knowledge with {other.agent_id}.",
-                        agent_id=agent.agent_id,
-                        position=agent.position,
-                        data=result,
-                    )
+                result = agent.communication_module.exchange_with(agent, other, self.tick)
+                self.metrics.communication_events += 1
+                self.log_event(
+                    "COMMUNICATION_OCCURRED",
+                    f"{agent.agent_id} exchanged knowledge with {other.agent_id}.",
+                    agent_id=agent.agent_id,
+                    source=agent.position,
+                    target=other.position,
+                    result="success",
+                    data=result,
+                )
 
-    def _task_distance(self, start: Position, delivery: Delivery) -> int:
-        pickup_pos = delivery.pickup_position(self.map)
-        adjacent = self.map.adjacent_walkable_positions(pickup_pos)
-        if not adjacent:
-            return 999999
-        return min(self.map.manhattan(start, pos) for pos in adjacent)
+    def _apply_dynamic_changes(self) -> None:
+        for index, change in enumerate(self.dynamic_changes):
+            if index in self._applied_dynamic_changes:
+                continue
+            if int(change.get("tick", -1)) != self.tick:
+                continue
+            position = tuple(change["position"])
+            action = change.get("action")
+            if action == "block":
+                if position not in [agent.position for agent in self.agents]:
+                    self.map.blocked.add(position)
+                    self._applied_dynamic_changes.add(index)
+            elif action == "unblock":
+                self.map.blocked.discard(position)
+                self._applied_dynamic_changes.add(index)
+            self.log_event(
+                "MAP_CHANGED",
+                f"Dynamic map change {action} at {position}.",
+                target=position,
+                result="success",
+                data=change,
+            )
+
+    def _move_target(self, agent: Agent, action: Action) -> Optional[Position]:
+        if action.target is not None and self.map.manhattan(agent.position, action.target) == 1:
+            return action.target
+        if action.direction not in DIRECTION_VECTORS:
+            return None
+        dx, dy = DIRECTION_VECTORS[action.direction]
+        return (agent.position[0] + dx, agent.position[1] + dy)
+
+    @staticmethod
+    def _action_for(planned_actions: List[Tuple[Agent, Action]], agent_id: str) -> Action:
+        return next(action for agent, action in planned_actions if agent.agent_id == agent_id)
+
+    def _shortest_service_distance(self, task: Task) -> int:
+        starts = self.map.adjacent_walkable_positions(task.pickup_position(self.map))
+        goals = set(self.map.adjacent_walkable_positions(task.dropoff_position(self.map)))
+        if not starts or not goals:
+            return 0
+        queue: List[Tuple[Position, int]] = [(start, 0) for start in starts]
+        seen = set(starts)
+        while queue:
+            current, distance = queue.pop(0)
+            if current in goals:
+                return distance
+            for neighbor in self.map.neighbors(current):
+                if neighbor in seen:
+                    continue
+                seen.add(neighbor)
+                queue.append((neighbor, distance + 1))
+        return 0
+
+    @staticmethod
+    def _result_message(result: ActionResult) -> str:
+        if result.success:
+            return f"{result.agent_id} {result.action.type} succeeded."
+        return f"{result.agent_id} {result.action.type} rejected: {result.failure_reason}."
+
+    def _replay_state_snapshot(self) -> Dict[str, object]:
+        return {
+            "tick": self.tick,
+            "agents": [
+                {
+                    "agent_id": agent.agent_id,
+                    "position": agent.position,
+                    "mode": agent.mode,
+                    "task_id": agent.current_task_id,
+                    "carrying_item_id": agent.carrying_item_id,
+                    "planned_path": agent.planned_path,
+                }
+                for agent in self.agents
+            ],
+            "tasks": self.serialize_tasks(),
+            "items": self.serialize_items(),
+        }

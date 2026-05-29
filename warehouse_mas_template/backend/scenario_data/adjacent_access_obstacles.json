@@ -1,0 +1,29 @@
+{
+  "scenario_id": "adjacent_access_obstacles",
+  "name": "Adjacent Access With Obstacles",
+  "description": "Pickup and delivery cells are mostly surrounded by obstacles but still reachable from one adjacent free cell.",
+  "grid": {
+    "width": 8,
+    "height": 6,
+    "blocked": [[1, 0], [0, 1], [1, 2], [4, 3], [6, 3], [5, 4]]
+  },
+  "pickups": {
+    "pickup_a": [1, 1]
+  },
+  "dropoffs": {
+    "dropoff_a": [5, 3]
+  },
+  "agents": [
+    {"agent_id": "agent_1", "position": [3, 1]}
+  ],
+  "items": [
+    {"item_id": "box_1", "task_id": "delivery_1", "pickup_id": "pickup_a", "dropoff_id": "dropoff_a"}
+  ],
+  "tasks": [
+    {"task_id": "delivery_1", "pickup_id": "pickup_a", "dropoff_id": "dropoff_a", "item_id": "box_1"}
+  ],
+  "default_seed": 13,
+  "config": {
+    "perception_radius": 3
+  }
+}
