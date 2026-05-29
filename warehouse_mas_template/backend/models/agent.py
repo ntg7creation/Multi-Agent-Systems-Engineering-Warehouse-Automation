@@ -159,7 +159,9 @@ class Agent:
             "failed_movement_counter": self.failed_movement_counter,
             "replanning_flag": self.replanning_flag,
             "perception_radius": self.perception_module.radius,
+            "perception": self._serialize_perception(),
             "memory": self.memory_module.serialize_summary(),
+            "memory_map": self._serialize_memory_map(),
             "communication": self.communication_module.serialize(),
             "movement": self.path_planning_module.serialize(),
             "agent_log": self.agent_log_module.serialize(),
@@ -168,3 +170,83 @@ class Agent:
         if include_memory:
             data["memory_detail"] = self.memory_module.serialize_detail()
         return data
+
+    def _serialize_perception(self) -> Dict[str, object]:
+        perception = self.memory_module.last_perception or {}
+        return {
+            "tick": perception.get("tick"),
+            "radius": self.perception_module.radius,
+            "visible_cells": perception.get("visible_cells", []),
+            "visible_agents": perception.get("visible_agents", []),
+            "visible_items": perception.get("visible_items", []),
+            "visible_pickups": perception.get("visible_pickups", []),
+            "visible_deliveries": perception.get("visible_deliveries", []),
+            "occupied_cells": perception.get("occupied_cells", []),
+        }
+
+    def _serialize_memory_map(self) -> Dict[str, object]:
+        congestion_values = [
+            float(entry.value)
+            for entry in self.memory_module.congestion.values()
+        ]
+        max_congestion = max(congestion_values) if congestion_values else 0.0
+        return {
+            "map_size": self.memory_module.map_size,
+            "known_cells": [
+                {
+                    "position": position,
+                    "cell_type": entry.value.get("cell_type", "unknown"),
+                    "walkable": entry.value.get("walkable"),
+                    "last_seen_tick": entry.last_seen_tick,
+                }
+                for position, entry in sorted(self.memory_module.known_cells.items())
+            ],
+            "known_pickups": [
+                {
+                    "pickup_id": pickup_id,
+                    "position": entry.value.get("position"),
+                    "last_seen_tick": entry.last_seen_tick,
+                }
+                for pickup_id, entry in sorted(self.memory_module.known_pickups.items())
+            ],
+            "known_deliveries": [
+                {
+                    "dropoff_id": dropoff_id,
+                    "position": entry.value.get("position"),
+                    "last_seen_tick": entry.last_seen_tick,
+                }
+                for dropoff_id, entry in sorted(self.memory_module.known_deliveries.items())
+            ],
+            "known_items": [
+                {
+                    "item_id": item_id,
+                    "task_id": entry.value.get("task_id"),
+                    "position": entry.value.get("position"),
+                    "state": entry.value.get("state"),
+                    "last_seen_tick": entry.last_seen_tick,
+                }
+                for item_id, entry in sorted(self.memory_module.known_items.items())
+            ],
+            "known_agents": [
+                {
+                    "agent_id": agent_id,
+                    "position": entry.value.get("position"),
+                    "state": entry.value.get("state"),
+                    "last_seen_tick": entry.last_seen_tick,
+                }
+                for agent_id, entry in sorted(self.memory_module.known_agents.items())
+            ],
+            "congestion": [
+                {
+                    "position": position,
+                    "value": round(float(entry.value), 4),
+                    "last_seen_tick": entry.last_seen_tick,
+                }
+                for position, entry in sorted(self.memory_module.congestion.items())
+            ],
+            "cell_history": [
+                {"position": position, **history.serialize()}
+                for position, history in sorted(self.memory_module.cell_history.items())
+            ],
+            "max_congestion": round(max_congestion, 4),
+        }

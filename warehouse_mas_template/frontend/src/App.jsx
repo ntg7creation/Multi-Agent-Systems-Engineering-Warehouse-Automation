@@ -14,14 +14,25 @@ function formatPosition(position) {
   return position ? `(${position[0]}, ${position[1]})` : '-'
 }
 
+function positionKey(position) {
+  return position ? position.join(',') : ''
+}
+
+function congestionLabel(value) {
+  if (!value) return ''
+  return Number(value).toFixed(value >= 10 ? 0 : 1)
+}
+
 function App() {
   const [state, setState] = useState(null)
   const [scenarios, setScenarios] = useState([])
   const [scenarioId, setScenarioId] = useState('default')
   const [seed, setSeed] = useState('42')
   const [stepDelay, setStepDelay] = useState(600)
+  const [gridZoom, setGridZoom] = useState(100)
   const [selectedAgentId, setSelectedAgentId] = useState('')
   const [selectedTaskId, setSelectedTaskId] = useState('')
+  const [viewMode, setViewMode] = useState('global')
   const [error, setError] = useState('')
 
   const selectedAgent = useMemo(
@@ -45,6 +56,65 @@ function App() {
     const set = new Set()
     selectedAgent?.planned_path?.forEach((position) => set.add(position.join(',')))
     return set
+  }, [selectedAgent])
+
+  const perceptionCells = useMemo(() => {
+    const set = new Set()
+    selectedAgent?.perception?.visible_cells?.forEach((cell) => set.add(positionKey(cell.position)))
+    return set
+  }, [selectedAgent])
+
+  const memoryCellMap = useMemo(() => {
+    const map = new Map()
+    selectedAgent?.memory_map?.known_cells?.forEach((cell) => {
+      map.set(positionKey(cell.position), cell)
+    })
+    selectedAgent?.memory_map?.known_pickups?.forEach((pickup) => {
+      map.set(positionKey(pickup.position), {
+        position: pickup.position,
+        cell_type: 'pickup',
+        walkable: false,
+        last_seen_tick: pickup.last_seen_tick,
+      })
+    })
+    selectedAgent?.memory_map?.known_deliveries?.forEach((delivery) => {
+      map.set(positionKey(delivery.position), {
+        position: delivery.position,
+        cell_type: 'dropoff',
+        walkable: false,
+        last_seen_tick: delivery.last_seen_tick,
+      })
+    })
+    return map
+  }, [selectedAgent])
+
+  const memoryItemMap = useMemo(() => {
+    const map = new Map()
+    selectedAgent?.memory_map?.known_items?.forEach((item) => {
+      if (!item.position) return
+      const key = positionKey(item.position)
+      const bucket = map.get(key) ?? []
+      bucket.push(item)
+      map.set(key, bucket)
+    })
+    return map
+  }, [selectedAgent])
+
+  const memoryAgentMap = useMemo(() => {
+    const map = new Map()
+    selectedAgent?.memory_map?.known_agents?.forEach((agent) => {
+      if (!agent.position) return
+      map.set(positionKey(agent.position), agent)
+    })
+    return map
+  }, [selectedAgent])
+
+  const memoryCongestionMap = useMemo(() => {
+    const map = new Map()
+    selectedAgent?.memory_map?.congestion?.forEach((entry) => {
+      map.set(positionKey(entry.position), entry.value)
+    })
+    return map
   }, [selectedAgent])
 
   const agentMap = useMemo(() => {
@@ -116,6 +186,7 @@ function App() {
   }, [state?.autorun?.active, stepDelay])
 
   const rows = state?.board?.rows ?? []
+  const boardWidth = state?.board?.width ?? 1
   const metrics = state?.metrics?.global ?? {}
   const agentMetrics = selectedAgent ? state?.metrics?.agents?.[selectedAgent.agent_id] : null
   const activeTasks = state?.tasks?.filter((task) => task.status !== 'delivered') ?? []
@@ -170,6 +241,42 @@ function App() {
           />
           <span>{stepDelay} ms</span>
         </label>
+        <label className="speed-control">
+          Grid zoom
+          <input
+            type="range"
+            min="45"
+            max="125"
+            step="5"
+            value={gridZoom}
+            onChange={(event) => setGridZoom(Number(event.target.value))}
+          />
+          <span>{gridZoom}%</span>
+        </label>
+        <button className="secondary" type="button" onClick={() => setGridZoom(100)}>Fit grid</button>
+        <div className="mode-toggle" aria-label="Map view mode">
+          <button
+            className={viewMode === 'global' ? 'active' : ''}
+            type="button"
+            onClick={() => setViewMode('global')}
+          >
+            Global
+          </button>
+          <button
+            className={viewMode === 'agent' ? 'active' : ''}
+            type="button"
+            onClick={() => setViewMode('agent')}
+          >
+            Agent view
+          </button>
+          <button
+            className={viewMode === 'memory' ? 'active' : ''}
+            type="button"
+            onClick={() => setViewMode('memory')}
+          >
+            Memory map
+          </button>
+        </div>
         <button className="secondary" onClick={refreshState}>Refresh</button>
       </section>
 
@@ -196,47 +303,101 @@ function App() {
               <span><i className="legend-pickup" />Pickup</span>
               <span><i className="legend-dropoff" />Delivery</span>
               <span><i className="legend-path" />Selected path</span>
+              <span><i className="legend-perception" />Perception</span>
+              <span><i className="legend-unknown" />Unknown</span>
+              <span><i className="legend-congestion" />Congestion</span>
             </div>
           </div>
+          {viewMode !== 'global' && selectedAgent && (
+            <div className="agent-view-strip">
+              <strong>{selectedAgent.agent_id}</strong>
+              {viewMode === 'agent' ? (
+                <>
+                  <span>radius {selectedAgent.perception?.radius ?? selectedAgent.perception_radius}</span>
+                  <span>seen cells {selectedAgent.perception?.visible_cells?.length ?? 0}</span>
+                  <span>perception tick {selectedAgent.perception?.tick ?? '-'}</span>
+                </>
+              ) : (
+                <>
+                  <span>known cells {selectedAgent.memory?.known_cell_count ?? 0}</span>
+                  <span>known items {selectedAgent.memory?.known_item_count ?? 0}</span>
+                  <span>congestion cells {selectedAgent.memory?.congestion_cell_count ?? 0}</span>
+                  <span>max congestion {selectedAgent.memory_map?.max_congestion ?? 0}</span>
+                </>
+              )}
+            </div>
+          )}
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `repeat(${state?.board?.width ?? 1}, 42px)`,
+              '--cell-size': `${Math.round(46 * (gridZoom / 100))}px`,
+              gridTemplateColumns: `repeat(${boardWidth}, var(--cell-size))`,
             }}
           >
             {rows.flatMap((row) =>
               row.map((cell) => {
-                const key = cell.position.join(',')
-                const agent = agentMap.get(key)
-                const items = itemMap.get(key) ?? []
+                const key = positionKey(cell.position)
+                const memoryCell = memoryCellMap.get(key)
+                const memoryCongestion = memoryCongestionMap.get(key) ?? 0
+                const maxCongestion = selectedAgent?.memory_map?.max_congestion ?? 0
+                const congestionIntensity = maxCongestion > 0 ? Math.min(memoryCongestion / maxCongestion, 1) : 0
+                const rememberedAgent = memoryAgentMap.get(key)
+                const agent = viewMode === 'memory'
+                  ? (selectedAgent?.position && key === positionKey(selectedAgent.position) ? selectedAgent : null)
+                  : agentMap.get(key)
+                const items = viewMode === 'memory' ? memoryItemMap.get(key) ?? [] : itemMap.get(key) ?? []
+                const displayType = viewMode === 'memory'
+                  ? memoryCell?.cell_type ?? 'unknown'
+                  : cell.cell_type
                 const isPath = pathCells.has(key)
+                const isPerceived = perceptionCells.has(key)
+                const dimForAgentView = viewMode === 'agent' && selectedAgent && !isPerceived
                 const isSelectedAgent = selectedAgent?.agent_id === agent?.agent_id
                 return (
                   <button
                     key={key}
                     className={[
                       'cell',
-                      cell.cell_type,
+                      displayType,
                       isPath ? 'path' : '',
+                      viewMode === 'agent' && isPerceived ? 'perceived' : '',
+                      viewMode === 'memory' && memoryCongestion > 0 ? 'congested' : '',
+                      dimForAgentView ? 'outside-perception' : '',
                       isSelectedAgent ? 'selected-agent-cell' : '',
                     ].filter(Boolean).join(' ')}
+                    style={{ '--congestion-alpha': congestionIntensity }}
                     type="button"
                     onClick={() => {
                       if (agent) setSelectedAgentId(agent.agent_id)
                       if (items[0]) setSelectedTaskId(items[0].task_id)
                     }}
-                    title={`${cell.position[0]},${cell.position[1]} ${cell.cell_type}`}
+                    title={
+                      viewMode === 'memory'
+                        ? `${cell.position[0]},${cell.position[1]} remembered ${displayType}; congestion ${memoryCongestion}`
+                        : `${cell.position[0]},${cell.position[1]} ${cell.cell_type}`
+                    }
                   >
                     <span className="cell-coord">{cell.position[0]},{cell.position[1]}</span>
+                    {viewMode === 'memory' && memoryCell?.last_seen_tick !== undefined && (
+                      <span className="memory-tick">t{memoryCell.last_seen_tick}</span>
+                    )}
                     {items.map((item) => (
                       <span key={item.item_id} className={`box ${item.state}`}>
                         {item.item_id.replace(/[^0-9a-z]/gi, '').slice(-1).toUpperCase()}
                       </span>
                     ))}
+                    {viewMode === 'memory' && rememberedAgent && !agent && (
+                      <span className="agent remembered">
+                        {rememberedAgent.agent_id.replace('agent_', 'A')}
+                      </span>
+                    )}
                     {agent && (
                       <span className={`agent ${agent.carrying_item_id ? 'carrying' : ''}`}>
                         {agent.agent_id.replace('agent_', 'A')}
                       </span>
+                    )}
+                    {viewMode === 'memory' && memoryCongestion > 0 && (
+                      <span className="congestion-label">{congestionLabel(memoryCongestion)}</span>
                     )}
                   </button>
                 )
@@ -269,6 +430,8 @@ function App() {
                 <span><strong>Task</strong>{selectedAgent.current_task_id ?? '-'}</span>
                 <span><strong>Carrying</strong>{selectedAgent.carrying_item_id ?? '-'}</span>
                 <span><strong>Target</strong>{formatPosition(selectedAgent.current_target)}</span>
+                <span><strong>Radius</strong>{selectedAgent.perception?.radius ?? selectedAgent.perception_radius}</span>
+                <span><strong>Visible cells</strong>{selectedAgent.perception?.visible_cells?.length ?? 0}</span>
                 <span><strong>Intended</strong>{selectedAgent.intended_action?.type ?? '-'}</span>
                 <span><strong>Previous</strong>{selectedAgent.previous_action_result?.success === false ? selectedAgent.previous_action_result.failure_reason : selectedAgent.previous_action_result?.action?.type ?? '-'}</span>
                 <span><strong>Path cells</strong>{selectedAgent.planned_path?.length ?? 0}</span>

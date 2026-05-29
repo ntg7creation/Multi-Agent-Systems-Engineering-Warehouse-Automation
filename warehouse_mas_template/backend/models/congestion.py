@@ -20,6 +20,7 @@ class CongestionConfig:
 @dataclass
 class CongestionEstimationModule:
     config: CongestionConfig = field(default_factory=CongestionConfig)
+    processed_history_counts: Dict[Position, Tuple[int, int, int]] = field(default_factory=dict)
 
     def update(self, agent: "Agent", tick: int) -> Dict[str, object]:
         memory = agent.memory_module
@@ -38,16 +39,16 @@ class CongestionEstimationModule:
             previous = memory.congestion_score(cell)
             history = memory.cell_history_for(cell)
             nearby_agents = self._nearby_count(cell, observed_agent_cells)
-            communicated = previous
+            waiting_delta, failed_delta, blocked_delta = self._new_history_deltas(cell, history)
             score = (
                 self.config.decay * previous
                 + self.config.nearby_agent_weight * nearby_agents
-                + self.config.waiting_weight * history.waiting_events
-                + self.config.failed_move_weight * history.failed_move_attempts
-                + self.config.blocked_path_weight * history.blocked_path_events
-                + self.config.communicated_weight * communicated
+                + self.config.waiting_weight * waiting_delta
+                + self.config.failed_move_weight * failed_delta
+                + self.config.blocked_path_weight * blocked_delta
             )
-            if score > 0.001:
+            score = score if score > 0.001 else 0.0
+            if abs(score - previous) > 0.0001:
                 memory.set_congestion(cell, score, tick)
                 changed += 1
 
@@ -76,3 +77,20 @@ class CongestionEstimationModule:
     def _nearby_count(cell: Position, agent_cells: Iterable[Position]) -> int:
         cx, cy = cell
         return sum(abs(cx - ax) + abs(cy - ay) <= 1 for ax, ay in agent_cells)
+
+    def _new_history_deltas(self, cell: Position, history) -> Tuple[int, int, int]:
+        current = (
+            history.waiting_events,
+            history.failed_move_attempts,
+            history.blocked_path_events,
+        )
+        previous = self.processed_history_counts.get(cell)
+        self.processed_history_counts[cell] = current
+        if previous is None:
+            return current
+        if any(current[index] < previous[index] for index in range(3)):
+            return (0, 0, 0)
+        return tuple(
+            max(0, current[index] - previous[index])
+            for index in range(3)
+        )

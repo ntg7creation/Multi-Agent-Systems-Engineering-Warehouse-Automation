@@ -187,9 +187,9 @@ class PathPlanningModule:
                     continue
                 step_cost = self._step_cost(neighbor, memory, current_tick, occupied)
                 new_cost = cost_so_far + step_cost
-                if new_cost > best_seen.get(neighbor, 999999.0) + 2.5:
+                if new_cost >= best_seen.get(neighbor, 999999.0):
                     continue
-                best_seen[neighbor] = min(best_seen.get(neighbor, new_cost), new_cost)
+                best_seen[neighbor] = new_cost
                 priority = new_cost + self._heuristic(neighbor, goals)
                 heappush(queue, (priority, new_cost, neighbor, (*path, neighbor)))
 

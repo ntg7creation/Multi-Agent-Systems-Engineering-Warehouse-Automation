@@ -142,6 +142,25 @@ def test_timestamp_memory_merge_keeps_newest_information():
     assert newer.merge_from(older) == 0
 
 
+def test_congestion_decays_without_replaying_old_history_events():
+    engine = make_engine()
+    agent = engine.get_agent("agent_1")
+    congested_cell = (2, 1)
+
+    agent.memory_module.initialize_map(engine.map.width, engine.map.height)
+    agent.memory_module.record_wait(congested_cell, tick=1)
+    agent.update_congestion(tick=1)
+    first_score = agent.memory_module.congestion_score(congested_cell)
+
+    agent.update_congestion(tick=2)
+    second_score = agent.memory_module.congestion_score(congested_cell)
+    agent.update_congestion(tick=3)
+    third_score = agent.memory_module.congestion_score(congested_cell)
+
+    assert first_score > 0
+    assert first_score > second_score > third_score
+
+
 def test_adjacent_only_communication():
     adjacent = make_engine(agent_positions={"agent_1": (1, 1), "agent_2": (2, 1)})
     for agent in adjacent.agents:
@@ -166,10 +185,36 @@ def test_task_assignment_uses_available_agent():
 
 def test_replanning_or_wait_on_invalid_next_move():
     engine = build_engine_from_scenario("blocked_route_replanning")
-    for _ in range(4):
+    for _ in range(30):
         engine.step()
-    assert engine.metrics.blocked_move_attempts >= 1
-    assert any(event["type"] == "MOVE_REJECTED" for event in engine.serialize_events())
+        if engine.is_complete:
+            break
+    assert engine.is_complete is True
+    assert engine.metrics.route_replans >= 1
+
+
+def test_agent_replans_when_known_wall_invalidates_planned_path_before_rejection():
+    engine = make_engine(
+        blocked={(3, 1)},
+        agent_positions={"agent_1": (2, 1)},
+        pickup=(1, 1),
+        dropoff=(5, 1),
+    )
+    task = engine.get_task("task_1")
+    task.status = "carrying"
+    task.assigned_agent_id = "agent_1"
+    task.carried_by = "agent_1"
+    agent = engine.get_agent("agent_1")
+    agent.assign_task(task.serialize(engine.map), tick=0)
+    agent.carrying_item_id = "item_1"
+    agent.planned_path = [(2, 1), (3, 1), (4, 1)]
+
+    agent.perceive_and_remember(engine)
+    action = agent.select_intended_action(engine.tick, engine.rng)
+
+    assert action.type == MOVE
+    assert action.target != (3, 1)
+    assert (3, 1) not in agent.planned_path
 
 
 def test_metrics_and_logs_update_after_completion():
@@ -184,3 +229,20 @@ def test_metrics_and_logs_update_after_completion():
     assert engine.metrics.delivery_events == 1
     assert any(event["type"] == "TASK_COMPLETED" for event in engine.serialize_events())
     assert engine.serialize_replay()["frames"]
+
+
+def test_symmetric_single_slot_crossing_resolves_with_yielding():
+    engine = build_engine_from_scenario("two_agents_single_slot_crossing")
+    assert engine.agents[0].position == (2, 3)
+    assert engine.agents[1].position == (8, 3)
+    for _ in range(120):
+        engine.step()
+        if engine.is_complete:
+            break
+    assert engine.is_complete is True
+    assert engine.metrics.completed_deliveries == 2
+    assert any(
+        action["reason"] == "yielding_to_higher_priority_agent"
+        for frame in engine.serialize_replay()["frames"]
+        for action in frame["intended_actions"]
+    )
