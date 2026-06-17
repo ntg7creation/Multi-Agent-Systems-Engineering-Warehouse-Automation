@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 
 from scenarios import list_scenarios
@@ -105,6 +105,44 @@ def get_events():
 def get_replay():
     limit = optional_int(request.args.get("limit"))
     return jsonify(simulation.replay(limit=limit))
+
+
+@app.get("/api/analytics/summary")
+def get_analytics_summary():
+    return jsonify(simulation.analytics_summary())
+
+
+@app.get("/api/analytics/events")
+def get_analytics_events():
+    limit = optional_int(request.args.get("limit"))
+    return jsonify(simulation.analytics_events(limit=limit))
+
+
+@app.get("/api/analytics/agents")
+def get_analytics_agents():
+    return jsonify(simulation.analytics_agents())
+
+
+@app.get("/api/analytics/replay")
+def get_analytics_replay():
+    limit = optional_int(request.args.get("limit"))
+    return jsonify(simulation.analytics_replay(limit=limit))
+
+
+@app.get("/api/analytics/export/json")
+def export_analytics_json():
+    response = jsonify(simulation.analytics_export_json())
+    response.headers["Content-Disposition"] = "attachment; filename=warehouse_analytics.json"
+    return response
+
+
+@app.get("/api/analytics/export/csv")
+def export_analytics_csv():
+    return Response(
+        simulation.analytics_export_csv(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=warehouse_analytics.csv"},
+    )
 
 
 @app.get("/api/scenarios")

@@ -80,6 +80,39 @@ class SimulationService:
         with self._lock:
             return self._engine.serialize_replay(limit=limit)
 
+    def analytics_summary(self) -> Dict[str, object]:
+        with self._lock:
+            return self._engine.analytics.summary(self._engine)
+
+    def analytics_events(self, limit: Optional[int] = None) -> Dict[str, object]:
+        with self._lock:
+            events = self._engine.analytics.global_event_log
+            if limit is not None and limit > 0:
+                events = events[-limit:]
+            return {"events": list(events)}
+
+    def analytics_agents(self) -> Dict[str, object]:
+        with self._lock:
+            return {
+                "agents": self._engine.analytics.agent_metrics(self._engine),
+                "decision_log": self._engine.analytics.local_agent_decision_log(self._engine),
+            }
+
+    def analytics_replay(self, limit: Optional[int] = None) -> Dict[str, object]:
+        with self._lock:
+            frames = self._engine.analytics.action_flow_replay_log
+            if limit is not None and limit > 0:
+                frames = frames[-limit:]
+            return {"frames": list(frames)}
+
+    def analytics_export_json(self) -> Dict[str, object]:
+        with self._lock:
+            return self._engine.analytics.export_json(self._engine)
+
+    def analytics_export_csv(self) -> str:
+        with self._lock:
+            return self._engine.analytics.export_csv(self._engine)
+
     def step(self, steps: int = 1) -> Dict[str, object]:
         with self._lock:
             return self._engine.run_steps(steps)

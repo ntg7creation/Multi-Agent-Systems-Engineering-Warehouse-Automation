@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from .action import MOVE, PICKUP, PLACE, WAIT, Action, ActionResult
 from .agent import Agent
+from .analytics import Analytics
 from .event_log import EventLogger, ReplayLog
 from .item import Item
 from .map import WarehouseMap
@@ -37,6 +38,7 @@ class SimulationEngine:
     run_id: str = field(init=False)
     task_manager: TaskManager = field(init=False)
     event_logger: EventLogger = field(init=False)
+    analytics: Analytics = field(init=False)
     replay_log: ReplayLog = field(default_factory=ReplayLog)
     _completion_logged: bool = False
     _applied_dynamic_changes: Set[int] = field(default_factory=set)
@@ -46,6 +48,7 @@ class SimulationEngine:
         self.run_id = f"{self.scenario_id}-{uuid4().hex[:8]}"
         self.task_manager = TaskManager(self.tasks, self.items)
         self.event_logger = EventLogger(run_id=self.run_id)
+        self.analytics = Analytics(run_id=self.run_id)
         self.metrics.total_tasks = len(self.tasks)
         for agent in self.agents:
             agent.memory_module.initialize_map(self.map.width, self.map.height)
@@ -96,8 +99,21 @@ class SimulationEngine:
 
         planned_actions = []
         for agent in self.agents:
+            replans_before = agent.metrics.route_replans
             action = agent.select_intended_action(self.tick, self.rng)
             planned_actions.append((agent, action))
+            if agent.metrics.route_replans > replans_before:
+                self.log_event(
+                    "REPLAN_TRIGGERED",
+                    f"{agent.agent_id} replanned route.",
+                    agent_id=agent.agent_id,
+                    task_id=action.task_id,
+                    item_id=action.item_id,
+                    source=agent.position,
+                    target=action.target,
+                    result="success",
+                    data={"action": action.serialize()},
+                )
             self.log_event(
                 "ACTION_SELECTED",
                 f"{agent.agent_id} selected {action.type}.",
@@ -109,6 +125,31 @@ class SimulationEngine:
                 result="selected",
                 data=action.serialize(),
             )
+            if action.type == MOVE:
+                self.log_event(
+                    "MOVE_ATTEMPTED",
+                    f"{agent.agent_id} attempted move to {action.target}.",
+                    agent_id=agent.agent_id,
+                    task_id=action.task_id,
+                    item_id=action.item_id,
+                    source=agent.position,
+                    target=action.target,
+                    result="attempted",
+                    data=action.serialize(),
+                )
+            if action.type == WAIT and action.reason.startswith("no_route"):
+                self.log_event(
+                    "BLOCKED_PATH_DETECTED",
+                    f"{agent.agent_id} has no route to current target.",
+                    agent_id=agent.agent_id,
+                    task_id=action.task_id,
+                    item_id=action.item_id,
+                    source=agent.position,
+                    target=action.target,
+                    result="blocked",
+                    rejection_reason=action.reason,
+                    data=action.serialize(),
+                )
 
         results = self._validate_and_apply_actions(planned_actions)
         for agent, action in planned_actions:
@@ -118,7 +159,7 @@ class SimulationEngine:
             self._record_action_event(result)
 
         self.log_event("TICK_COMPLETED", f"Tick {self.tick} completed.", result="success")
-        self.replay_log.record({
+        replay_frame = {
             "run_id": self.run_id,
             "tick": self.tick,
             "before": before_state,
@@ -126,7 +167,9 @@ class SimulationEngine:
             "results": [result.serialize() for result in results.values()],
             "after": self._replay_state_snapshot(),
             "metrics": self.serialize_metrics(),
-        })
+        }
+        self.replay_log.record(replay_frame)
+        self.analytics.record_replay_frame(replay_frame)
 
         if self.is_complete and not self._completion_logged:
             self._completion_logged = True
@@ -289,7 +332,7 @@ class SimulationEngine:
         data: Optional[Dict[str, object]] = None,
         position: Optional[Position] = None,
     ) -> None:
-        self.event_logger.log(
+        event = self.event_logger.log(
             tick=self.tick,
             event_type=event_type,
             message=message,
@@ -302,6 +345,7 @@ class SimulationEngine:
             rejection_reason=rejection_reason,
             data=data,
         )
+        self.analytics.record_event(event)
 
     def _validate_and_apply_actions(
         self,

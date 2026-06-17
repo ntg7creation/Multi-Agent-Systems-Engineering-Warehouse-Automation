@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5000/api'
+export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5000/api'
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -19,6 +19,28 @@ export function getState() {
 
 export function getScenarios() {
   return request('/scenarios')
+}
+
+export function getAnalyticsSummary() {
+  return request('/analytics/summary')
+}
+
+export function getAnalyticsEvents(limit = 200) {
+  const query = limit ? `?limit=${limit}` : ''
+  return request(`/analytics/events${query}`)
+}
+
+export function getAnalyticsAgents() {
+  return request('/analytics/agents')
+}
+
+export function getAnalyticsReplay(limit = 200) {
+  const query = limit ? `?limit=${limit}` : ''
+  return request(`/analytics/replay${query}`)
+}
+
+export function analyticsDownloadUrl(format) {
+  return `${API_BASE}/analytics/export/${format}`
 }
 
 export function tick(steps = 1) {

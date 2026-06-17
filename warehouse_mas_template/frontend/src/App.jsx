@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  analyticsDownloadUrl,
+  getAnalyticsAgents,
+  getAnalyticsEvents,
+  getAnalyticsReplay,
+  getAnalyticsSummary,
   getScenarios,
   getState,
   pauseSimulation,
@@ -23,8 +28,209 @@ function congestionLabel(value) {
   return Number(value).toFixed(value >= 10 ? 0 : 1)
 }
 
+function formatMetric(value, digits = 3) {
+  if (value === null || value === undefined || value === '') return '-'
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? value : value.toFixed(digits)
+  }
+  return value
+}
+
+function MetricCard({ label, value }) {
+  return (
+    <span>
+      <strong>{label}</strong>
+      {formatMetric(value)}
+    </span>
+  )
+}
+
+function BarChart({ rows, labelKey, valueKey }) {
+  const max = Math.max(1, ...rows.map((row) => Number(row[valueKey]) || 0))
+  return (
+    <div className="bar-chart">
+      {rows.length ? rows.map((row) => {
+        const value = Number(row[valueKey]) || 0
+        return (
+          <div key={`${row[labelKey]}-${valueKey}`} className="bar-row">
+            <span>{row[labelKey]}</span>
+            <div className="bar-track">
+              <i style={{ width: `${Math.max(3, (value / max) * 100)}%` }} />
+            </div>
+            <strong>{formatMetric(value)}</strong>
+          </div>
+        )
+      }) : <p className="empty">No chart data yet.</p>}
+    </div>
+  )
+}
+
+function AnalyticsView({ analytics, refreshAnalytics }) {
+  const summary = analytics.summary
+  const system = summary?.system ?? {}
+  const agents = Object.values(analytics.agents?.agents ?? summary?.agents ?? {})
+  const events = analytics.events?.events ?? []
+  const timeline = summary?.timeline ?? []
+  const latestFrame = analytics.replay?.frames?.slice(-1)?.[0]
+  const utilityRows = agents.map((agent) => ({
+    agent_id: agent.agent_id,
+    utility_score: agent.utility_score ?? 0,
+  }))
+  const countDelta = (rows, key) => rows.map((row, index) => ({
+    tick: `T${row.tick ?? index}`,
+    value: Math.max(0, Number(row[key] ?? 0) - Number(rows[index - 1]?.[key] ?? 0)),
+  }))
+
+  return (
+    <main className="analytics-layout">
+      <section className="analytics-header">
+        <div>
+          <h2>Analytics</h2>
+          <p className="subtitle">
+            {summary?.run_id ? `Run ${summary.run_id}` : 'Start or step the simulation to collect analytics.'}
+          </p>
+        </div>
+        <div className="analytics-actions">
+          <button className="secondary" type="button" onClick={refreshAnalytics}>Refresh analytics</button>
+          <a className="download-button" href={analyticsDownloadUrl('json')}>Download JSON</a>
+          <a className="download-button" href={analyticsDownloadUrl('csv')}>Download CSV</a>
+        </div>
+      </section>
+
+      <section className="stats analytics-stats">
+        <MetricCard label="Tick" value={system.current_tick ?? system.total_steps} />
+        <MetricCard label="Completed" value={system.completed_deliveries} />
+        <MetricCard label="Completion rate" value={system.task_completion_rate} />
+        <MetricCard label="Throughput" value={system.throughput} />
+        <MetricCard label="Avg task time" value={system.average_completion_time} />
+        <MetricCard label="Total waits" value={system.total_waiting_actions ?? system.wait_actions} />
+        <MetricCard label="Blocked moves" value={system.total_blocked_movements ?? system.blocked_move_attempts} />
+        <MetricCard label="Replans" value={system.route_replans} />
+        <MetricCard label="CAS" value={system.collision_avoidance_score} />
+        <MetricCard label="Social welfare" value={system.social_welfare} />
+      </section>
+
+      <section className="analytics-grid">
+        <section className="card analytics-table-card">
+          <h2>Per-Agent Metrics</h2>
+          {agents.length ? (
+            <div className="table-scroll">
+              <table className="analytics-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Tasks</th>
+                    <th>Actions</th>
+                    <th>Useful</th>
+                    <th>Efficiency</th>
+                    <th>Waits</th>
+                    <th>Failed moves</th>
+                    <th>Replans</th>
+                    <th>Utility</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agents.map((agent) => (
+                    <tr key={agent.agent_id}>
+                      <td>{agent.agent_id}</td>
+                      <td>{agent.tasks_completed ?? agent.completed_tasks ?? 0}</td>
+                      <td>{agent.total_actions ?? 0}</td>
+                      <td>{agent.useful_actions ?? 0}</td>
+                      <td>{formatMetric(agent.efficiency)}</td>
+                      <td>{agent.wait_count ?? agent.wait_actions ?? 0}</td>
+                      <td>{agent.failed_movement_count ?? agent.blocked_move_attempts ?? 0}</td>
+                      <td>{agent.replanning_count ?? agent.route_replans ?? 0}</td>
+                      <td>{formatMetric(agent.utility_score)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="empty">No agent metrics are available yet.</p>}
+        </section>
+
+        <section className="card">
+          <h2>Utility Per Agent</h2>
+          <BarChart rows={utilityRows} labelKey="agent_id" valueKey="utility_score" />
+        </section>
+
+        <section className="card">
+          <h2>Completed Deliveries Over Time</h2>
+          <BarChart
+            rows={timeline.map((row) => ({ tick: `T${row.tick}`, completed_deliveries: row.completed_deliveries }))}
+            labelKey="tick"
+            valueKey="completed_deliveries"
+          />
+        </section>
+
+        <section className="card">
+          <h2>Wait / Block / Replan Events</h2>
+          <div className="mini-chart-stack">
+            <span>Waits</span>
+            <BarChart rows={countDelta(timeline, 'wait_actions')} labelKey="tick" valueKey="value" />
+            <span>Blocked</span>
+            <BarChart rows={countDelta(timeline, 'blocked_move_attempts')} labelKey="tick" valueKey="value" />
+            <span>Replans</span>
+            <BarChart rows={countDelta(timeline, 'route_replans')} labelKey="tick" valueKey="value" />
+          </div>
+        </section>
+
+        <section className="card analytics-table-card event-log-wide">
+          <h2>Event Log Viewer</h2>
+          {events.length ? (
+            <div className="table-scroll event-table-scroll">
+              <table className="analytics-table">
+                <thead>
+                  <tr>
+                    <th>Tick</th>
+                    <th>Event</th>
+                    <th>Agent</th>
+                    <th>Task</th>
+                    <th>Result</th>
+                    <th>Reason / Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.slice().reverse().map((event) => (
+                    <tr key={event.event_id}>
+                      <td>{event.tick}</td>
+                      <td>{event.type}</td>
+                      <td>{event.agent_id ?? '-'}</td>
+                      <td>{event.task_id ?? '-'}</td>
+                      <td>{event.result ?? '-'}</td>
+                      <td>{event.rejection_reason || event.message || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="empty">No analytics events yet.</p>}
+        </section>
+
+        <section className="card">
+          <h2>Replay Snapshot</h2>
+          {latestFrame ? (
+            <div className="details split">
+              <span><strong>Latest tick</strong>{latestFrame.tick}</span>
+              <span><strong>Frames</strong>{analytics.replay?.frames?.length ?? 0}</span>
+              <span><strong>Actions</strong>{latestFrame.intended_actions?.length ?? 0}</span>
+              <span><strong>Results</strong>{latestFrame.results?.length ?? 0}</span>
+            </div>
+          ) : <p className="empty">No replay frames yet.</p>}
+        </section>
+      </section>
+    </main>
+  )
+}
+
 function App() {
   const [state, setState] = useState(null)
+  const [analytics, setAnalytics] = useState({
+    summary: null,
+    events: { events: [] },
+    agents: { agents: {}, decision_log: [] },
+    replay: { frames: [] },
+  })
   const [scenarios, setScenarios] = useState([])
   const [scenarioId, setScenarioId] = useState('default')
   const [seed, setSeed] = useState('42')
@@ -33,6 +239,7 @@ function App() {
   const [selectedAgentId, setSelectedAgentId] = useState('')
   const [selectedTaskId, setSelectedTaskId] = useState('')
   const [viewMode, setViewMode] = useState('global')
+  const [activeTab, setActiveTab] = useState('simulation')
   const [error, setError] = useState('')
 
   const selectedAgent = useMemo(
@@ -160,6 +367,21 @@ function App() {
     }
   }
 
+  async function refreshAnalytics() {
+    try {
+      const [summary, events, agentsData, replay] = await Promise.all([
+        getAnalyticsSummary(),
+        getAnalyticsEvents(250),
+        getAnalyticsAgents(),
+        getAnalyticsReplay(250),
+      ])
+      setAnalytics({ summary, events, agents: agentsData, replay })
+      setError('')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function perform(action) {
     try {
       const data = await action()
@@ -168,6 +390,7 @@ function App() {
       } else {
         await refreshState()
       }
+      await refreshAnalytics()
       setError('')
     } catch (err) {
       setError(err.message)
@@ -177,11 +400,18 @@ function App() {
   useEffect(() => {
     refreshScenarios()
     refreshState()
+    refreshAnalytics()
   }, [])
 
   useEffect(() => {
     if (!state?.autorun?.active) return undefined
     const id = setInterval(refreshState, Math.max(150, stepDelay))
+    return () => clearInterval(id)
+  }, [state?.autorun?.active, stepDelay])
+
+  useEffect(() => {
+    if (!state?.autorun?.active) return undefined
+    const id = setInterval(refreshAnalytics, Math.max(250, stepDelay))
     return () => clearInterval(id)
   }, [state?.autorun?.active, stepDelay])
 
@@ -281,6 +511,31 @@ function App() {
       </section>
 
       {error && <div className="error">{error}</div>}
+
+      <nav className="tabbar" aria-label="Dashboard sections">
+        <button
+          className={activeTab === 'simulation' ? 'active' : ''}
+          type="button"
+          onClick={() => setActiveTab('simulation')}
+        >
+          Simulation
+        </button>
+        <button
+          className={activeTab === 'analytics' ? 'active' : ''}
+          type="button"
+          onClick={() => {
+            setActiveTab('analytics')
+            refreshAnalytics()
+          }}
+        >
+          Analytics
+        </button>
+      </nav>
+
+      {activeTab === 'analytics' ? (
+        <AnalyticsView analytics={analytics} refreshAnalytics={refreshAnalytics} />
+      ) : (
+        <>
 
       <section className="stats">
         <span><strong>Tick</strong>{state?.tick ?? '-'}</span>
@@ -503,6 +758,8 @@ function App() {
           </section>
         </aside>
       </main>
+        </>
+      )}
     </div>
   )
 }

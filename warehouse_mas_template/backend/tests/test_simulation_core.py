@@ -231,6 +231,31 @@ def test_metrics_and_logs_update_after_completion():
     assert engine.serialize_replay()["frames"]
 
 
+def test_analytics_summary_and_exports_are_available():
+    engine = build_engine_from_scenario("simple_one_agent_delivery")
+    for _ in range(30):
+        engine.step()
+        if engine.is_complete:
+            break
+
+    summary = engine.analytics.summary(engine)
+    assert summary["run_id"] == engine.run_id
+    assert summary["system"]["completed_deliveries"] == 1
+    assert "social_welfare" in summary["system"]
+    assert next(iter(summary["agents"].values()))["utility_score"] is not None
+    assert engine.analytics.action_flow_replay_log
+    assert any(event["type"] == "SIMULATION_STARTED" for event in engine.analytics.global_event_log)
+
+    exported = engine.analytics.export_json(engine)
+    assert exported["summary"]["run_id"] == engine.run_id
+    assert exported["events"]
+    assert "agent_decisions" in exported
+
+    csv_export = engine.analytics.export_csv(engine)
+    assert "# events" in csv_export
+    assert "# agent_metrics" in csv_export
+
+
 def test_symmetric_single_slot_crossing_resolves_with_yielding():
     engine = build_engine_from_scenario("two_agents_single_slot_crossing")
     assert engine.agents[0].position == (2, 3)
