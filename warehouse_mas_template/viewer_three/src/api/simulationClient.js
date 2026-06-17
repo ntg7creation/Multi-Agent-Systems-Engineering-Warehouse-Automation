@@ -15,6 +15,7 @@ async function request(path, options = {}) {
 export const simulationClient = {
   state: () => request('/state'),
   board: () => request('/board'),
+  scenarios: () => request('/scenarios'),
   tick: (steps = 1) =>
     request('/tick', {
       method: 'POST',
@@ -29,5 +30,16 @@ export const simulationClient = {
     request('/reset', {
       method: 'POST',
       body: JSON.stringify({ scenario_id: scenarioId, seed }),
+    }),
+  start: ({ delayMs = 600, maxTicks = null } = {}) =>
+    request('/start', {
+      method: 'POST',
+      body: JSON.stringify({ delay_ms: delayMs, max_ticks: maxTicks }),
+    }),
+  pause: () => request('/pause', { method: 'POST' }),
+  resume: ({ delayMs = 600, maxTicks = null } = {}) =>
+    request('/resume', {
+      method: 'POST',
+      body: JSON.stringify({ delay_ms: delayMs, max_ticks: maxTicks }),
     }),
 }
