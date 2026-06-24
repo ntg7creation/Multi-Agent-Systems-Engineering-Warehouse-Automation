@@ -1,0 +1,198 @@
+{
+  "scenario_id": "four_agents_central_intersection",
+  "name": "Four Agents, Central Intersection",
+  "description": "Four agents take opposite-side tasks through a compact central junction. This tests simultaneous crossing, collision prevention, waiting, and recovery after rejected moves.",
+  "grid": {
+    "width": 15,
+    "height": 15,
+    "blocked": [
+      [
+        5,
+        6
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        6,
+        8
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        8,
+        5
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        9,
+        6
+      ],
+      [
+        9,
+        8
+      ]
+    ]
+  },
+  "pickups": {
+    "pickup_n": [
+      4,
+      2
+    ],
+    "pickup_s": [
+      10,
+      12
+    ],
+    "pickup_w": [
+      2,
+      10
+    ],
+    "pickup_e": [
+      12,
+      4
+    ]
+  },
+  "dropoffs": {
+    "dropoff_n": [
+      3,
+      4
+    ],
+    "dropoff_s": [
+      11,
+      10
+    ],
+    "dropoff_w": [
+      4,
+      11
+    ],
+    "dropoff_e": [
+      10,
+      3
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "agent_1",
+      "position": [
+        4,
+        1
+      ]
+    },
+    {
+      "agent_id": "agent_2",
+      "position": [
+        10,
+        13
+      ]
+    },
+    {
+      "agent_id": "agent_3",
+      "position": [
+        1,
+        10
+      ]
+    },
+    {
+      "agent_id": "agent_4",
+      "position": [
+        13,
+        4
+      ]
+    }
+  ],
+  "items": [
+    {
+      "item_id": "box_1",
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_n",
+      "dropoff_id": "dropoff_s"
+    },
+    {
+      "item_id": "box_2",
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_s",
+      "dropoff_id": "dropoff_n"
+    },
+    {
+      "item_id": "box_3",
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_w",
+      "dropoff_id": "dropoff_e"
+    },
+    {
+      "item_id": "box_4",
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_w"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_n",
+      "dropoff_id": "dropoff_s",
+      "item_id": "box_1"
+    },
+    {
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_s",
+      "dropoff_id": "dropoff_n",
+      "item_id": "box_2"
+    },
+    {
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_w",
+      "dropoff_id": "dropoff_e",
+      "item_id": "box_3"
+    },
+    {
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_w",
+      "item_id": "box_4"
+    }
+  ],
+  "default_seed": 83,
+  "config": {
+    "perception_radius": 3,
+    "allocation_strategy": "nearest_available",
+    "routing_strategy": "local_memory_astar",
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.0,
+      "gamma_failed_route": 1.8,
+      "delta_uncertainty": 0.25,
+      "near_optimal_margin": 0.35
+    },
+    "congestion": {
+      "decay": 0.85,
+      "nearby_agent_weight": 1.5,
+      "waiting_weight": 0.9,
+      "failed_move_weight": 1.2,
+      "blocked_path_weight": 1.0,
+      "path_padding": 1
+    }
+  }
+}

@@ -1,0 +1,732 @@
+{
+  "scenario_id": "ten_agents_twenty_tasks_stress",
+  "name": "Ten Agents, Twenty-Task Stress Test",
+  "description": "The full stress scenario: ten agents, twenty cross-warehouse deliveries, five shelf barriers, limited openings, and sustained shared traffic. Use it for throughput, social welfare, waiting, blocked-move, and scalability comparisons.",
+  "grid": {
+    "width": 25,
+    "height": 17,
+    "blocked": [
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        4,
+        9
+      ],
+      [
+        4,
+        10
+      ],
+      [
+        4,
+        11
+      ],
+      [
+        4,
+        13
+      ],
+      [
+        4,
+        14
+      ],
+      [
+        8,
+        2
+      ],
+      [
+        8,
+        3
+      ],
+      [
+        8,
+        4
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        8,
+        11
+      ],
+      [
+        8,
+        12
+      ],
+      [
+        8,
+        13
+      ],
+      [
+        8,
+        15
+      ],
+      [
+        12,
+        1
+      ],
+      [
+        12,
+        2
+      ],
+      [
+        12,
+        4
+      ],
+      [
+        12,
+        5
+      ],
+      [
+        12,
+        6
+      ],
+      [
+        12,
+        7
+      ],
+      [
+        12,
+        9
+      ],
+      [
+        12,
+        10
+      ],
+      [
+        12,
+        11
+      ],
+      [
+        12,
+        12
+      ],
+      [
+        12,
+        14
+      ],
+      [
+        16,
+        1
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        5
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        8
+      ],
+      [
+        16,
+        9
+      ],
+      [
+        16,
+        10
+      ],
+      [
+        16,
+        12
+      ],
+      [
+        16,
+        13
+      ],
+      [
+        16,
+        15
+      ],
+      [
+        20,
+        1
+      ],
+      [
+        20,
+        2
+      ],
+      [
+        20,
+        3
+      ],
+      [
+        20,
+        5
+      ],
+      [
+        20,
+        6
+      ],
+      [
+        20,
+        7
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        20,
+        10
+      ],
+      [
+        20,
+        11
+      ],
+      [
+        20,
+        12
+      ],
+      [
+        20,
+        14
+      ]
+    ]
+  },
+  "pickups": {
+    "pickup_1": [
+      1,
+      1
+    ],
+    "pickup_2": [
+      1,
+      4
+    ],
+    "pickup_3": [
+      1,
+      7
+    ],
+    "pickup_4": [
+      1,
+      10
+    ],
+    "pickup_5": [
+      1,
+      14
+    ],
+    "pickup_6": [
+      5,
+      2
+    ],
+    "pickup_7": [
+      5,
+      12
+    ],
+    "pickup_8": [
+      9,
+      5
+    ],
+    "pickup_9": [
+      13,
+      9
+    ],
+    "pickup_10": [
+      17,
+      13
+    ],
+    "pickup_11": [
+      21,
+      2
+    ],
+    "pickup_12": [
+      21,
+      5
+    ],
+    "pickup_13": [
+      21,
+      8
+    ],
+    "pickup_14": [
+      21,
+      11
+    ],
+    "pickup_15": [
+      21,
+      14
+    ],
+    "pickup_16": [
+      18,
+      3
+    ],
+    "pickup_17": [
+      18,
+      12
+    ],
+    "pickup_18": [
+      14,
+      5
+    ],
+    "pickup_19": [
+      10,
+      10
+    ],
+    "pickup_20": [
+      6,
+      14
+    ]
+  },
+  "dropoffs": {
+    "dropoff_1": [
+      23,
+      14
+    ],
+    "dropoff_2": [
+      23,
+      11
+    ],
+    "dropoff_3": [
+      23,
+      8
+    ],
+    "dropoff_4": [
+      23,
+      5
+    ],
+    "dropoff_5": [
+      23,
+      1
+    ],
+    "dropoff_6": [
+      19,
+      14
+    ],
+    "dropoff_7": [
+      19,
+      7
+    ],
+    "dropoff_8": [
+      15,
+      2
+    ],
+    "dropoff_9": [
+      11,
+      13
+    ],
+    "dropoff_10": [
+      7,
+      9
+    ],
+    "dropoff_11": [
+      1,
+      14
+    ],
+    "dropoff_12": [
+      1,
+      10
+    ],
+    "dropoff_13": [
+      1,
+      7
+    ],
+    "dropoff_14": [
+      1,
+      4
+    ],
+    "dropoff_15": [
+      1,
+      1
+    ],
+    "dropoff_16": [
+      5,
+      15
+    ],
+    "dropoff_17": [
+      9,
+      12
+    ],
+    "dropoff_18": [
+      13,
+      6
+    ],
+    "dropoff_19": [
+      17,
+      4
+    ],
+    "dropoff_20": [
+      21,
+      10
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "agent_1",
+      "position": [
+        2,
+        2
+      ]
+    },
+    {
+      "agent_id": "agent_2",
+      "position": [
+        2,
+        5
+      ]
+    },
+    {
+      "agent_id": "agent_3",
+      "position": [
+        2,
+        8
+      ]
+    },
+    {
+      "agent_id": "agent_4",
+      "position": [
+        2,
+        11
+      ]
+    },
+    {
+      "agent_id": "agent_5",
+      "position": [
+        2,
+        14
+      ]
+    },
+    {
+      "agent_id": "agent_6",
+      "position": [
+        22,
+        2
+      ]
+    },
+    {
+      "agent_id": "agent_7",
+      "position": [
+        22,
+        5
+      ]
+    },
+    {
+      "agent_id": "agent_8",
+      "position": [
+        22,
+        8
+      ]
+    },
+    {
+      "agent_id": "agent_9",
+      "position": [
+        22,
+        11
+      ]
+    },
+    {
+      "agent_id": "agent_10",
+      "position": [
+        22,
+        14
+      ]
+    }
+  ],
+  "items": [
+    {
+      "item_id": "box_1",
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_1",
+      "dropoff_id": "dropoff_1"
+    },
+    {
+      "item_id": "box_2",
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_2",
+      "dropoff_id": "dropoff_2"
+    },
+    {
+      "item_id": "box_3",
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_3",
+      "dropoff_id": "dropoff_3"
+    },
+    {
+      "item_id": "box_4",
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_4",
+      "dropoff_id": "dropoff_4"
+    },
+    {
+      "item_id": "box_5",
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_5",
+      "dropoff_id": "dropoff_5"
+    },
+    {
+      "item_id": "box_6",
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_6",
+      "dropoff_id": "dropoff_6"
+    },
+    {
+      "item_id": "box_7",
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_7",
+      "dropoff_id": "dropoff_7"
+    },
+    {
+      "item_id": "box_8",
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_8",
+      "dropoff_id": "dropoff_8"
+    },
+    {
+      "item_id": "box_9",
+      "task_id": "delivery_9",
+      "pickup_id": "pickup_9",
+      "dropoff_id": "dropoff_9"
+    },
+    {
+      "item_id": "box_10",
+      "task_id": "delivery_10",
+      "pickup_id": "pickup_10",
+      "dropoff_id": "dropoff_10"
+    },
+    {
+      "item_id": "box_11",
+      "task_id": "delivery_11",
+      "pickup_id": "pickup_11",
+      "dropoff_id": "dropoff_11"
+    },
+    {
+      "item_id": "box_12",
+      "task_id": "delivery_12",
+      "pickup_id": "pickup_12",
+      "dropoff_id": "dropoff_12"
+    },
+    {
+      "item_id": "box_13",
+      "task_id": "delivery_13",
+      "pickup_id": "pickup_13",
+      "dropoff_id": "dropoff_13"
+    },
+    {
+      "item_id": "box_14",
+      "task_id": "delivery_14",
+      "pickup_id": "pickup_14",
+      "dropoff_id": "dropoff_14"
+    },
+    {
+      "item_id": "box_15",
+      "task_id": "delivery_15",
+      "pickup_id": "pickup_15",
+      "dropoff_id": "dropoff_15"
+    },
+    {
+      "item_id": "box_16",
+      "task_id": "delivery_16",
+      "pickup_id": "pickup_16",
+      "dropoff_id": "dropoff_16"
+    },
+    {
+      "item_id": "box_17",
+      "task_id": "delivery_17",
+      "pickup_id": "pickup_17",
+      "dropoff_id": "dropoff_17"
+    },
+    {
+      "item_id": "box_18",
+      "task_id": "delivery_18",
+      "pickup_id": "pickup_18",
+      "dropoff_id": "dropoff_18"
+    },
+    {
+      "item_id": "box_19",
+      "task_id": "delivery_19",
+      "pickup_id": "pickup_19",
+      "dropoff_id": "dropoff_19"
+    },
+    {
+      "item_id": "box_20",
+      "task_id": "delivery_20",
+      "pickup_id": "pickup_20",
+      "dropoff_id": "dropoff_20"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_1",
+      "dropoff_id": "dropoff_1",
+      "item_id": "box_1"
+    },
+    {
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_2",
+      "dropoff_id": "dropoff_2",
+      "item_id": "box_2"
+    },
+    {
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_3",
+      "dropoff_id": "dropoff_3",
+      "item_id": "box_3"
+    },
+    {
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_4",
+      "dropoff_id": "dropoff_4",
+      "item_id": "box_4"
+    },
+    {
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_5",
+      "dropoff_id": "dropoff_5",
+      "item_id": "box_5"
+    },
+    {
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_6",
+      "dropoff_id": "dropoff_6",
+      "item_id": "box_6"
+    },
+    {
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_7",
+      "dropoff_id": "dropoff_7",
+      "item_id": "box_7"
+    },
+    {
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_8",
+      "dropoff_id": "dropoff_8",
+      "item_id": "box_8"
+    },
+    {
+      "task_id": "delivery_9",
+      "pickup_id": "pickup_9",
+      "dropoff_id": "dropoff_9",
+      "item_id": "box_9"
+    },
+    {
+      "task_id": "delivery_10",
+      "pickup_id": "pickup_10",
+      "dropoff_id": "dropoff_10",
+      "item_id": "box_10"
+    },
+    {
+      "task_id": "delivery_11",
+      "pickup_id": "pickup_11",
+      "dropoff_id": "dropoff_11",
+      "item_id": "box_11"
+    },
+    {
+      "task_id": "delivery_12",
+      "pickup_id": "pickup_12",
+      "dropoff_id": "dropoff_12",
+      "item_id": "box_12"
+    },
+    {
+      "task_id": "delivery_13",
+      "pickup_id": "pickup_13",
+      "dropoff_id": "dropoff_13",
+      "item_id": "box_13"
+    },
+    {
+      "task_id": "delivery_14",
+      "pickup_id": "pickup_14",
+      "dropoff_id": "dropoff_14",
+      "item_id": "box_14"
+    },
+    {
+      "task_id": "delivery_15",
+      "pickup_id": "pickup_15",
+      "dropoff_id": "dropoff_15",
+      "item_id": "box_15"
+    },
+    {
+      "task_id": "delivery_16",
+      "pickup_id": "pickup_16",
+      "dropoff_id": "dropoff_16",
+      "item_id": "box_16"
+    },
+    {
+      "task_id": "delivery_17",
+      "pickup_id": "pickup_17",
+      "dropoff_id": "dropoff_17",
+      "item_id": "box_17"
+    },
+    {
+      "task_id": "delivery_18",
+      "pickup_id": "pickup_18",
+      "dropoff_id": "dropoff_18",
+      "item_id": "box_18"
+    },
+    {
+      "task_id": "delivery_19",
+      "pickup_id": "pickup_19",
+      "dropoff_id": "dropoff_19",
+      "item_id": "box_19"
+    },
+    {
+      "task_id": "delivery_20",
+      "pickup_id": "pickup_20",
+      "dropoff_id": "dropoff_20",
+      "item_id": "box_20"
+    }
+  ],
+  "default_seed": 127,
+  "config": {
+    "perception_radius": 3,
+    "allocation_strategy": "nearest_available",
+    "routing_strategy": "local_memory_astar",
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.5,
+      "gamma_failed_route": 2.0,
+      "delta_uncertainty": 0.25,
+      "near_optimal_margin": 0.35
+    },
+    "congestion": {
+      "decay": 0.85,
+      "nearby_agent_weight": 1.5,
+      "waiting_weight": 0.9,
+      "failed_move_weight": 1.2,
+      "blocked_path_weight": 1.0,
+      "path_padding": 1
+    }
+  }
+}

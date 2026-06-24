@@ -81,6 +81,52 @@ input[type="checkbox"] {
   flex-wrap: wrap;
 }
 
+.viewer-title {
+  flex: 1 1 560px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+.viewer-title strong,
+.viewer-title span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.title-metric {
+  font-variant-numeric: tabular-nums;
+}
+
+.title-tick {
+  width: 108px;
+}
+
+.title-buffer {
+  width: 146px;
+}
+
+.title-status-slot {
+  display: inline-flex;
+  width: 132px;
+}
+
+.title-fill-state {
+  width: 52px;
+}
+
+.title-placeholder {
+  visibility: hidden;
+}
+
+.viewer-title .title-scenario {
+  flex: 1 1 140px;
+  min-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .control-panel span {
   color: #9fb0c7;
 }

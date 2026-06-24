@@ -35,14 +35,18 @@ export function ControlPanel() {
     <header className="control-panel">
       <div className="viewer-title">
         <strong>Warehouse MAS Three Viewer</strong>
-        <span>Display tick {state?.tick ?? '-'}</span>
-        <span>
+        <span className="title-metric title-tick">Display tick {state?.tick ?? '-'}</span>
+        <span className="title-metric title-buffer">
           Buffer {stateBuffer.length}/{bufferTarget}
           {stateBuffer.length ? ` to T${stateBuffer[stateBuffer.length - 1]?.tick}` : ''}
         </span>
-        {bufferPlaybackActive && <span className="live-pill">Buffered playback</span>}
-        {bufferFilling && <span>filling...</span>}
-        <span>{state?.scenario?.name ?? 'No scenario loaded'}</span>
+        <span className="title-status-slot">
+          {bufferPlaybackActive && <span className="live-pill">Buffered playback</span>}
+        </span>
+        <span className={`title-fill-state${bufferFilling ? '' : ' title-placeholder'}`}>
+          filling...
+        </span>
+        <span className="title-scenario">{state?.scenario?.name ?? 'No scenario loaded'}</span>
       </div>
 
       <div className="scenario-strip">

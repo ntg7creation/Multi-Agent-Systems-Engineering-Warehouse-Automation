@@ -1,0 +1,185 @@
+{
+  "scenario_id": "one_agent_four_deliveries",
+  "name": "One Agent, Four Sequential Deliveries",
+  "description": "A single agent must repeatedly become available, take the next task, and complete four deliveries through a shelf layout with multiple detours.",
+  "grid": {
+    "width": 13,
+    "height": 8,
+    "blocked": [
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        7,
+        2
+      ],
+      [
+        7,
+        4
+      ],
+      [
+        7,
+        5
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        10,
+        1
+      ],
+      [
+        10,
+        3
+      ],
+      [
+        10,
+        4
+      ],
+      [
+        10,
+        6
+      ]
+    ]
+  },
+  "pickups": {
+    "pickup_a": [
+      1,
+      1
+    ],
+    "pickup_b": [
+      1,
+      6
+    ],
+    "pickup_c": [
+      5,
+      4
+    ],
+    "pickup_d": [
+      8,
+      7
+    ]
+  },
+  "dropoffs": {
+    "dropoff_a": [
+      11,
+      1
+    ],
+    "dropoff_b": [
+      11,
+      6
+    ],
+    "dropoff_c": [
+      8,
+      1
+    ],
+    "dropoff_d": [
+      2,
+      4
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "agent_1",
+      "position": [
+        2,
+        3
+      ]
+    }
+  ],
+  "items": [
+    {
+      "item_id": "box_1",
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_a",
+      "dropoff_id": "dropoff_a"
+    },
+    {
+      "item_id": "box_2",
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_b",
+      "dropoff_id": "dropoff_b"
+    },
+    {
+      "item_id": "box_3",
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_c",
+      "dropoff_id": "dropoff_c"
+    },
+    {
+      "item_id": "box_4",
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_d",
+      "dropoff_id": "dropoff_d"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_a",
+      "dropoff_id": "dropoff_a",
+      "item_id": "box_1"
+    },
+    {
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_b",
+      "dropoff_id": "dropoff_b",
+      "item_id": "box_2"
+    },
+    {
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_c",
+      "dropoff_id": "dropoff_c",
+      "item_id": "box_3"
+    },
+    {
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_d",
+      "dropoff_id": "dropoff_d",
+      "item_id": "box_4"
+    }
+  ],
+  "default_seed": 61,
+  "config": {
+    "perception_radius": 3,
+    "allocation_strategy": "nearest_available",
+    "routing_strategy": "local_memory_astar",
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.0,
+      "gamma_failed_route": 1.8,
+      "delta_uncertainty": 0.25,
+      "near_optimal_margin": 0.35
+    },
+    "congestion": {
+      "decay": 0.85,
+      "nearby_agent_weight": 1.5,
+      "waiting_weight": 0.9,
+      "failed_move_weight": 1.2,
+      "blocked_path_weight": 1.0,
+      "path_padding": 1
+    }
+  }
+}
