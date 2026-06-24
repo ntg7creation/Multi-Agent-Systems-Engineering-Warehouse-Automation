@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { GridFloor3D } from './GridFloor3D'
 import { Agent3D } from './Agent3D'
@@ -14,12 +15,37 @@ function positionKey(position) {
   return position ? `${position[0]},${position[1]}` : ''
 }
 
-function SceneContent() {
+function DebugField({ label, value }) {
+  return (
+    <span>
+      <strong>{label}</strong>
+      {value ?? '-'}
+    </span>
+  )
+}
+
+function VisualDebugPanel({ debug }) {
+  if (!debug) return null
+  return (
+    <div className="visual-debug-panel">
+      <DebugField label="Visual state" value={debug.visualState} />
+      <DebugField label="Active clip" value={debug.activeClip} />
+      <DebugField label="Clip time" value={`${debug.clipTime} / ${debug.clipDuration}`} />
+      <DebugField label="Action weight" value={debug.actionWeight} />
+      <DebugField label="Turn detected" value={String(debug.turnDetected)} />
+      <DebugField label="Incoming direction" value={debug.incomingDirection} />
+      <DebugField label="Outgoing direction" value={debug.outgoingDirection} />
+    </div>
+  )
+}
+
+function SceneContent({ onVisualDebug }) {
   const state = useSimulationStore((store) => store.state)
   const selectedAgentId = useSimulationStore((store) => store.selectedAgentId)
   const viewMode = useSimulationStore((store) => store.viewMode)
   const cameraFollowSelected = useSimulationStore((store) => store.cameraFollowSelected)
   const bufferDelayMs = useSimulationStore((store) => store.bufferDelayMs)
+  const bufferPlaybackActive = useSimulationStore((store) => store.bufferPlaybackActive)
   const selectAgent = useSimulationStore((store) => store.selectAgent)
 
   const board = state?.board
@@ -111,7 +137,12 @@ function SceneContent() {
           selected={agent.agent_id === selectedAgentId}
           dimmed={agent.agent_id !== selectedAgentId && isDimmedPosition(agent.position)}
           movementDurationMs={bufferDelayMs}
+          runId={state?.run_id}
+          simulationTick={state?.tick ?? 0}
+          playbackActive={bufferPlaybackActive}
+          isComplete={Boolean(state?.is_complete)}
           onSelect={selectAgent}
+          onVisualDebug={onVisualDebug}
         />
       ))}
     </>
@@ -119,11 +150,29 @@ function SceneContent() {
 }
 
 export function WarehouseScene() {
+  const selectedAgentId = useSimulationStore((store) => store.selectedAgentId)
+  const [visualDebugByAgent, setVisualDebugByAgent] = useState({})
+  const handleVisualDebug = useCallback((agentId, debug) => {
+    setVisualDebugByAgent((current) => {
+      if (!debug) {
+        if (!current[agentId]) return current
+        const next = { ...current }
+        delete next[agentId]
+        return next
+      }
+      const debugJson = JSON.stringify(debug)
+      if (JSON.stringify(current[agentId]) === debugJson) return current
+      return { ...current, [agentId]: debug }
+    })
+  }, [])
+  const selectedVisualDebug = selectedAgentId ? visualDebugByAgent[selectedAgentId] : null
+
   return (
     <section className="scene-panel">
       <Canvas shadows dpr={[1, 2]} onPointerMissed={() => useSimulationStore.getState().selectAgent(null)}>
-        <SceneContent />
+        <SceneContent onVisualDebug={handleVisualDebug} />
       </Canvas>
+      <VisualDebugPanel debug={selectedVisualDebug} />
     </section>
   )
 }

@@ -1,44 +1,68 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import * as THREE from 'three'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
-import { CELL_SIZE, MODEL_ASSETS } from './constants'
-import { gridDirectionToYaw, gridToWorld, movementYaw } from './gridToWorld'
+import { useSimulationStore } from '../state/useSimulationStore'
+import {
+  CARRY_BOX_ANCHOR_POSITION,
+  CELL_SIZE,
+  MODEL_ASSETS,
+} from './constants'
+import {
+  AgentAnimationController,
+  buildAgentVisualSchedule,
+  inferAgentYaw,
+} from './agentAnimationController'
 
 const fbxLoader = new FBXLoader()
 const assetCache = new Map()
 
-function loadFbxOnce(path, label) {
-  if (!assetCache.has(path)) {
-    assetCache.set(
-      path,
-      new Promise((resolve, reject) => {
-        fbxLoader.load(
-          path,
-          (object) => {
-            console.log(`${label} loaded:`, object)
-            resolve(object)
-          },
-          undefined,
-          (error) => {
-            console.error(`Error loading ${path}. Make sure ${path} exists in viewer_three/public.`, error)
-            reject(error)
-          },
-        )
-      }),
-    )
-  }
-  return assetCache.get(path)
+function normalizeAssetCandidates(paths) {
+  return Array.isArray(paths) ? paths : [paths]
 }
 
-function useFbxAsset(path, label) {
+function loadFbxPath(path) {
+  return new Promise((resolve, reject) => {
+    fbxLoader.load(path, resolve, undefined, reject)
+  })
+}
+
+function loadFbxOnce(paths, label) {
+  const candidates = normalizeAssetCandidates(paths)
+  const cacheKey = candidates.join('|')
+  if (!assetCache.has(cacheKey)) {
+    assetCache.set(
+      cacheKey,
+      (async () => {
+        let lastError = null
+        for (const path of candidates) {
+          try {
+            const object = await loadFbxPath(path)
+            return object
+          } catch (error) {
+            lastError = error
+          }
+        }
+        console.warn(
+          `Could not load ${label}. Tried: ${candidates.join(', ')}. Make sure the FBX file exists in viewer_three/public.`,
+          lastError,
+        )
+        throw lastError
+      })(),
+    )
+  }
+  return assetCache.get(cacheKey)
+}
+
+function useFbxAsset(paths, label) {
   const [asset, setAsset] = useState(null)
   const [failed, setFailed] = useState(false)
+  const cacheKey = normalizeAssetCandidates(paths).join('|')
 
   useEffect(() => {
     let alive = true
-    loadFbxOnce(path, label)
+    setFailed(false)
+    loadFbxOnce(paths, label)
       .then((object) => {
         if (alive) setAsset(object)
       })
@@ -48,7 +72,7 @@ function useFbxAsset(path, label) {
     return () => {
       alive = false
     }
-  }, [path, label])
+  }, [cacheKey, label, paths])
 
   return { asset, failed }
 }
@@ -61,16 +85,8 @@ function trackNamesMatch(character, clip) {
   return clip.tracks.some((track) => nodeNames.has(track.name.split('.')[0]))
 }
 
-function agentYaw(agent) {
-  const action = agent.intended_action
-  const fromDirection = gridDirectionToYaw(action?.direction)
-  if (fromDirection !== null) return fromDirection
-  const previous = agent.previous_action_result
-  return movementYaw(previous?.source_position, previous?.target_position) ?? 0
-}
-
-function vectorFromArray(position) {
-  return new THREE.Vector3(position[0], position[1], position[2])
+function firstClip(asset) {
+  return asset?.animations?.[0] ?? null
 }
 
 export function Agent3D({
@@ -79,17 +95,34 @@ export function Agent3D({
   selected,
   dimmed = false,
   movementDurationMs = 600,
+  runId,
+  simulationTick,
+  playbackActive = false,
+  isComplete = false,
   onSelect,
+  onVisualDebug,
 }) {
   const groupRef = useRef()
-  const mixerRef = useRef(null)
-  const transitionRef = useRef(null)
-  const targetKeyRef = useRef('')
+  const controllerRef = useRef(null)
+  const previousAgentRef = useRef(null)
+  const previousRunIdRef = useRef(null)
+  const previousTickRef = useRef(null)
+  const scheduledByPlaybackRef = useRef(false)
+  const lastVisualDebugPushRef = useRef(0)
+  const lastVisualDebugJsonRef = useRef('')
+  const carryBoxOffset = useSimulationStore((store) => store.carryBoxOffset)
   const { asset: characterAsset, failed: characterFailed } = useFbxAsset(
     MODEL_ASSETS.character,
     'character',
   )
-  const { asset: walkingAsset } = useFbxAsset(MODEL_ASSETS.walking, 'animation')
+  const { asset: normalWalkingAsset } = useFbxAsset(MODEL_ASSETS.normalWalking, 'normal walking animation')
+  const { asset: carryWalkingAsset } = useFbxAsset(MODEL_ASSETS.carryWalking, 'carry walking animation')
+  const { asset: idleAsset } = useFbxAsset(MODEL_ASSETS.idle, 'idle animation')
+  const { asset: carryIdleAsset } = useFbxAsset(MODEL_ASSETS.carryIdle, 'carry idle animation')
+  const { asset: pickupAsset } = useFbxAsset(MODEL_ASSETS.pickup, 'pickup/place animation')
+  const { asset: turnLeftAsset } = useFbxAsset(MODEL_ASSETS.turnLeft, 'left-turn animation')
+  const currentActionType = agent.previous_action_result?.action?.type
+  const isPickupOrPlaceAction = currentActionType === 'pickup' || currentActionType === 'place'
 
   const character = useMemo(() => {
     if (!characterAsset) return null
@@ -109,6 +142,31 @@ export function Agent3D({
     return instance
   }, [agent.agent_id, characterAsset])
 
+  useLayoutEffect(() => {
+    if (!groupRef.current || !board) return undefined
+    const controller = new AgentAnimationController({
+      group: groupRef.current,
+      board,
+      cellSize: CELL_SIZE,
+      agentId: agent.agent_id,
+    })
+    controllerRef.current = controller
+    controller.setCarrying(Boolean(agent.carrying_item_id))
+    controller.resetPose({
+      cell: agent.position,
+      yaw: inferAgentYaw(agent),
+      board,
+    })
+    previousAgentRef.current = agent
+    previousRunIdRef.current = runId
+    previousTickRef.current = simulationTick
+
+    return () => {
+      controller.dispose()
+      if (controllerRef.current === controller) controllerRef.current = null
+    }
+  }, [agent.agent_id])
+
   useEffect(() => {
     if (!character) return
     character.traverse((child) => {
@@ -124,85 +182,148 @@ export function Agent3D({
   }, [character, dimmed])
 
   useEffect(() => {
-    mixerRef.current?.stopAllAction()
-    mixerRef.current = null
+    controllerRef.current?.setDebugEnabled(selected)
+    if (!selected) onVisualDebug?.(agent.agent_id, null)
+  }, [agent.agent_id, onVisualDebug, selected])
 
-    if (!character || !walkingAsset) return undefined
-    const clip = walkingAsset.animations?.[0]
-    if (!clip) {
-      console.warn('No animations found in /models/walking.fbx.')
+  useEffect(() => {
+    const controller = controllerRef.current
+    const normalWalkClip = firstClip(normalWalkingAsset)
+    const carryWalkClip = firstClip(carryWalkingAsset)
+    const idleClip = firstClip(idleAsset)
+    const carryIdleClip = firstClip(carryIdleAsset)
+    const pickupClip = firstClip(pickupAsset)
+    const turnLeftClip = firstClip(turnLeftAsset)
+
+    if (!controller || !character || !normalWalkClip || !carryWalkClip || !idleClip || !carryIdleClip) return undefined
+
+    if (!normalWalkClip || !carryWalkClip) {
+      console.warn('No animations found in the walking FBX files.')
       return undefined
     }
 
-    console.log('animation clip name:', clip.name || '(unnamed clip)')
-    if (!trackNamesMatch(character, clip)) {
+    if (!trackNamesMatch(character, normalWalkClip)) {
       console.warn(
-        `${agent.agent_id}: animation track names did not match the character skeleton. If this agent does not animate, check Mixamo skeleton compatibility and track names.`,
+        `${agent.agent_id}: normal walking animation track names did not match the character skeleton. If this agent does not animate, check Mixamo skeleton compatibility and track names.`,
       )
     }
+    if (!trackNamesMatch(character, carryWalkClip)) {
+      console.warn(`${agent.agent_id}: carry walking animation track names did not match the character skeleton.`)
+    }
+    if (!trackNamesMatch(character, idleClip)) {
+      console.warn(`${agent.agent_id}: idle animation track names did not match the character skeleton.`)
+    }
+    if (!trackNamesMatch(character, carryIdleClip)) {
+      console.warn(`${agent.agent_id}: carry idle animation track names did not match the character skeleton.`)
+    }
+    if (pickupClip && !trackNamesMatch(character, pickupClip)) {
+      console.warn(`${agent.agent_id}: pickup/place animation track names did not match the character skeleton.`)
+    }
+    if (turnLeftClip && !trackNamesMatch(character, turnLeftClip)) {
+      console.warn(`${agent.agent_id}: left-turn animation track names did not match the character skeleton.`)
+    }
 
-    const mixer = new THREE.AnimationMixer(character)
-    const action = mixer.clipAction(clip)
-    action.reset()
-    action.play()
-    mixerRef.current = mixer
+    controller.configureAnimations({
+      character,
+      clips: {
+        walk: normalWalkClip,
+        carryWalk: carryWalkClip,
+        idle: idleClip,
+        carryIdle: carryIdleClip,
+        pickup: pickupClip,
+        turnLeft: turnLeftClip,
+      },
+    })
 
     return () => {
-      mixer.stopAllAction()
-      mixer.uncacheRoot(character)
+      controller.disposeAnimations()
     }
-  }, [agent.agent_id, character, walkingAsset])
-
-  const targetWorldPosition = useMemo(
-    () => gridToWorld(agent.position, board, CELL_SIZE, 0),
-    [agent.position, board],
-  )
-  const targetKey = `${targetWorldPosition[0]},${targetWorldPosition[1]},${targetWorldPosition[2]}`
+  }, [
+    agent.agent_id,
+    character,
+    normalWalkingAsset,
+    carryWalkingAsset,
+    idleAsset,
+    carryIdleAsset,
+    pickupAsset,
+    turnLeftAsset,
+  ])
 
   useLayoutEffect(() => {
-    if (!groupRef.current) return
-    const target = vectorFromArray(targetWorldPosition)
+    const controller = controllerRef.current
+    if (!controller || !board) return
+    controller.setBoard(board)
+    controller.setCarrying(Boolean(agent.carrying_item_id))
 
-    if (!targetKeyRef.current) {
-      groupRef.current.position.copy(target)
-      targetKeyRef.current = targetKey
+    const previousAgent = previousAgentRef.current
+    const previousRunId = previousRunIdRef.current
+    const previousTick = previousTickRef.current
+    const runChanged = previousRunId != null && previousRunId !== runId
+    const tickReset = previousTick != null && simulationTick < previousTick
+    const tickChanged = previousTick !== simulationTick || previousRunId !== runId
+
+    if (!previousAgent || runChanged || tickReset) {
+      controller.resetPose({
+        cell: agent.position,
+        yaw: inferAgentYaw(agent, controller.getYaw()),
+        board,
+      })
+      previousAgentRef.current = agent
+      previousRunIdRef.current = runId
+      previousTickRef.current = simulationTick
+      scheduledByPlaybackRef.current = false
       return
     }
 
-    if (targetKeyRef.current === targetKey) return
+    if (!tickChanged) return
 
-    const from = groupRef.current.position.clone()
-    transitionRef.current = {
-      from,
-      to: target,
-      elapsed: 0,
-      duration: Math.max(0.08, movementDurationMs / 1000),
+    const stepDuration = Math.max(0.08, movementDurationMs / 1000)
+    const schedule = buildAgentVisualSchedule({
+      agent,
+      previousAgent,
+      stepDuration,
+      previousYaw: controller.getYaw(),
+    })
+    if (schedule.segments.length) {
+      scheduledByPlaybackRef.current = playbackActive
+      controller.setSchedule(schedule.segments, {
+        board,
+        fallbackCell: agent.position,
+        fallbackYaw: inferAgentYaw(agent, controller.getYaw()),
+        startTime: schedule.startTime,
+      })
+    } else {
+      scheduledByPlaybackRef.current = false
+      controller.resetPose({
+        cell: agent.position,
+        yaw: inferAgentYaw(agent, controller.getYaw()),
+        board,
+      })
     }
-    targetKeyRef.current = targetKey
-  }, [movementDurationMs, targetKey, targetWorldPosition])
 
-  useFrame((_, delta) => {
-    mixerRef.current?.update(delta)
+    previousAgentRef.current = agent
+    previousRunIdRef.current = runId
+    previousTickRef.current = simulationTick
+  }, [agent, board, movementDurationMs, playbackActive, runId, simulationTick])
 
-    const transition = transitionRef.current
-    if (!transition || !groupRef.current) return
-
-    transition.elapsed += delta
-    const progress = Math.min(transition.elapsed / transition.duration, 1)
-    groupRef.current.position.lerpVectors(transition.from, transition.to, progress)
-
-    if (progress >= 1) {
-      groupRef.current.position.copy(transition.to)
-      transitionRef.current = null
-    }
+  useFrame((frameState, delta) => {
+    const advance = !scheduledByPlaybackRef.current || playbackActive || isComplete
+    const controller = controllerRef.current
+    controller?.update(delta, { advance })
+    if (!selected || !controller || !onVisualDebug) return
+    const now = frameState.clock.elapsedTime
+    if (now - lastVisualDebugPushRef.current < 0.08) return
+    lastVisualDebugPushRef.current = now
+    const debugState = controller.getDebugState()
+    const debugJson = JSON.stringify(debugState)
+    if (debugJson === lastVisualDebugJsonRef.current) return
+    lastVisualDebugJsonRef.current = debugJson
+    onVisualDebug(agent.agent_id, debugState)
   })
-
-  const yaw = agentYaw(agent)
 
   return (
     <group
       ref={groupRef}
-      rotation={[0, yaw, 0]}
       onClick={(event) => {
         event.stopPropagation()
         onSelect(agent.agent_id)
@@ -229,13 +350,24 @@ export function Agent3D({
       )}
 
       {agent.carrying_item_id && (
-        <mesh position={[0, CELL_SIZE * 0.78, 0]} castShadow>
-          <boxGeometry args={[CELL_SIZE * 0.22, CELL_SIZE * 0.22, CELL_SIZE * 0.22]} />
-          <meshStandardMaterial color="#facc15" transparent={dimmed} opacity={dimmed ? 0.3 : 1} />
-        </mesh>
+        <group
+          position={[
+            CARRY_BOX_ANCHOR_POSITION.x,
+            CARRY_BOX_ANCHOR_POSITION.y,
+            CARRY_BOX_ANCHOR_POSITION.z,
+          ]}
+        >
+          <mesh
+            position={[carryBoxOffset.x, carryBoxOffset.y, carryBoxOffset.z]}
+            castShadow
+          >
+            <boxGeometry args={[CELL_SIZE * 0.22, CELL_SIZE * 0.22, CELL_SIZE * 0.22]} />
+            <meshStandardMaterial color="#facc15" transparent={dimmed} opacity={dimmed ? 0.3 : 1} />
+          </mesh>
+        </group>
       )}
 
-      {(agent.mode === 'waiting' || agent.replanning_flag) && (
+      {!isPickupOrPlaceAction && (agent.mode === 'waiting' || agent.replanning_flag) && (
         <mesh position={[0, CELL_SIZE * 0.95, 0]}>
           <sphereGeometry args={[CELL_SIZE * 0.09, 16, 16]} />
           <meshStandardMaterial color={agent.replanning_flag ? '#f97316' : '#facc15'} />

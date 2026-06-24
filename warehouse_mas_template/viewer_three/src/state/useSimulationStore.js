@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { simulationClient } from '../api/simulationClient'
+import { DEFAULT_CARRY_BOX_OFFSET } from '../scene/constants'
 
 export const useSimulationStore = create((set, get) => ({
   state: null,
@@ -12,6 +13,7 @@ export const useSimulationStore = create((set, get) => ({
   bufferPlaybackActive: false,
   bufferDelayMs: 600,
   bufferFilling: false,
+  carryBoxOffset: DEFAULT_CARRY_BOX_OFFSET,
   loading: false,
   error: '',
 

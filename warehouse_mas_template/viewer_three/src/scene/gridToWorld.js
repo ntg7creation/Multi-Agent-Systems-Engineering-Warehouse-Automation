@@ -1,4 +1,4 @@
-import { CELL_SIZE } from './constants'
+import { CELL_SIZE } from './constants.js'
 
 // Converts backend grid coordinates into centered Three.js world coordinates.
 // Backend cells use (x, y); Three.js uses (x, y-up, z), so grid y maps to z.
