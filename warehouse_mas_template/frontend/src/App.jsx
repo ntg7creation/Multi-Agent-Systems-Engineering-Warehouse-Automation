@@ -663,6 +663,36 @@ function App() {
 
         <aside className="side-panels">
           <section className="card">
+            <h2>Tasks And Items</h2>
+            <div className="list">
+              {state?.tasks?.map((task) => (
+                <button
+                  key={task.task_id}
+                  className={`task-row ${selectedTask?.task_id === task.task_id ? 'selected' : ''}`}
+                  type="button"
+                  onClick={() => setSelectedTaskId(task.task_id)}
+                >
+                  <strong>{task.task_id}</strong>
+                  <span>{task.status}</span>
+                  <span>{task.assigned_agent_id ?? 'unassigned'}</span>
+                </button>
+              ))}
+            </div>
+            {selectedTask && (
+              <div className="details split">
+                <span><strong>Pickup</strong>{formatPosition(selectedTask.pickup_position)}</span>
+                <span><strong>Delivery</strong>{formatPosition(selectedTask.dropoff_position)}</span>
+                <span><strong>Item</strong>{selectedTask.item_id}</span>
+                <span><strong>Item state</strong>{selectedItem?.state ?? '-'}</span>
+                <span><strong>Created</strong>{selectedTask.created_tick}</span>
+                <span><strong>Assigned</strong>{selectedTask.assigned_tick ?? '-'}</span>
+                <span><strong>Picked</strong>{selectedTask.picked_tick ?? '-'}</span>
+                <span><strong>Delivered</strong>{selectedTask.delivered_tick ?? '-'}</span>
+              </div>
+            )}
+          </section>
+
+          <section className="card">
             <h2>Agent Inspection</h2>
             <div className="list compact">
               {state?.agents?.map((agent) => (
@@ -696,36 +726,6 @@ function App() {
                 <span><strong>Congestion cells</strong>{selectedAgent.memory?.congestion_cell_count ?? 0}</span>
                 <span><strong>Completed</strong>{agentMetrics?.completed_tasks ?? 0}</span>
                 <span><strong>Efficiency</strong>{agentMetrics?.efficiency ?? 0}</span>
-              </div>
-            )}
-          </section>
-
-          <section className="card">
-            <h2>Tasks And Items</h2>
-            <div className="list">
-              {state?.tasks?.map((task) => (
-                <button
-                  key={task.task_id}
-                  className={`task-row ${selectedTask?.task_id === task.task_id ? 'selected' : ''}`}
-                  type="button"
-                  onClick={() => setSelectedTaskId(task.task_id)}
-                >
-                  <strong>{task.task_id}</strong>
-                  <span>{task.status}</span>
-                  <span>{task.assigned_agent_id ?? 'unassigned'}</span>
-                </button>
-              ))}
-            </div>
-            {selectedTask && (
-              <div className="details split">
-                <span><strong>Pickup</strong>{formatPosition(selectedTask.pickup_position)}</span>
-                <span><strong>Delivery</strong>{formatPosition(selectedTask.dropoff_position)}</span>
-                <span><strong>Item</strong>{selectedTask.item_id}</span>
-                <span><strong>Item state</strong>{selectedItem?.state ?? '-'}</span>
-                <span><strong>Created</strong>{selectedTask.created_tick}</span>
-                <span><strong>Assigned</strong>{selectedTask.assigned_tick ?? '-'}</span>
-                <span><strong>Picked</strong>{selectedTask.picked_tick ?? '-'}</span>
-                <span><strong>Delivered</strong>{selectedTask.delivered_tick ?? '-'}</span>
               </div>
             )}
           </section>
