@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from threading import Lock, Thread
 from time import sleep
-from typing import Dict, Optional
+from typing import Dict, Mapping, Optional
 
 from models.engine import SimulationEngine
 from scenarios import build_engine_from_scenario
@@ -21,14 +21,32 @@ class SimulationService:
     def engine(self) -> SimulationEngine:
         return self._engine
 
-    def reset(self, scenario_id: str = "default", seed: Optional[int] = None) -> Dict[str, object]:
+    def reset(
+        self,
+        scenario_id: str = "default",
+        seed: Optional[int] = None,
+        config_overrides: Optional[Mapping[str, object]] = None,
+    ) -> Dict[str, object]:
         self.stop_autorun()
         with self._lock:
-            self._engine = build_engine_from_scenario(scenario_id=scenario_id, seed=seed)
+            self._engine = build_engine_from_scenario(
+                scenario_id=scenario_id,
+                seed=seed,
+                config_overrides=config_overrides,
+            )
             return self._engine.serialize_state()
 
-    def load_scenario(self, scenario_id: str, seed: Optional[int] = None) -> Dict[str, object]:
-        return self.reset(scenario_id=scenario_id, seed=seed)
+    def load_scenario(
+        self,
+        scenario_id: str,
+        seed: Optional[int] = None,
+        config_overrides: Optional[Mapping[str, object]] = None,
+    ) -> Dict[str, object]:
+        return self.reset(
+            scenario_id=scenario_id,
+            seed=seed,
+            config_overrides=config_overrides,
+        )
 
     def state(self) -> Dict[str, object]:
         with self._lock:

@@ -57,17 +57,17 @@ export function runSteps(steps = 10) {
   })
 }
 
-export function resetSimulation({ scenarioId = 'default', seed } = {}) {
+export function resetSimulation({ scenarioId = 'default', seed, config } = {}) {
   return request('/reset', {
     method: 'POST',
-    body: JSON.stringify({ scenario_id: scenarioId, seed }),
+    body: JSON.stringify({ scenario_id: scenarioId, seed, config }),
   })
 }
 
-export function loadScenario({ scenarioId = 'default', seed } = {}) {
+export function loadScenario({ scenarioId = 'default', seed, config } = {}) {
   return request('/scenario/load', {
     method: 'POST',
-    body: JSON.stringify({ scenario_id: scenarioId, seed }),
+    body: JSON.stringify({ scenario_id: scenarioId, seed, config }),
   })
 }
 

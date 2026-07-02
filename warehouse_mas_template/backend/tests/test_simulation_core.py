@@ -8,6 +8,7 @@ from models.memory import KnowledgeEntry, MemoryModule
 from models.task import Task
 from models.engine import SimulationEngine
 from scenarios import build_engine_from_scenario
+from strategy_config import config_profile_overrides
 
 
 def make_engine(
@@ -191,6 +192,24 @@ def test_replanning_or_wait_on_invalid_next_move():
             break
     assert engine.is_complete is True
     assert engine.metrics.route_replans >= 1
+
+
+def test_scenario_config_overrides_are_applied_to_engine_and_agents():
+    engine = build_engine_from_scenario(
+        "four_agents_adjacent_access_cluster",
+        config_overrides=config_profile_overrides("baseline"),
+    )
+    agent = engine.agents[0]
+
+    assert engine.serialize_scenario_info()["config"]["path_weights"]["beta_congestion"] == 0.0
+    assert agent.path_planning_module.config.distance_weight == 1.0
+    assert agent.path_planning_module.config.congestion_weight == 0.0
+    assert agent.path_planning_module.config.failed_route_weight == 0.0
+    assert agent.path_planning_module.config.uncertainty_weight == 0.0
+    assert agent.path_planning_module.config.near_optimal_margin == 0.0
+    assert agent.path_planning_module.config.congestion_region_padding == 0
+    assert agent.congestion_module.config.decay == 0.0
+    assert agent.congestion_module.config.path_padding == 0
 
 
 def test_agent_replans_when_known_wall_invalidates_planned_path_before_rejection():

@@ -164,6 +164,7 @@ class Agent:
             "memory_map": self._serialize_memory_map(),
             "communication": self.communication_module.serialize(),
             "movement": self.path_planning_module.serialize(),
+            "congestion": self.congestion_module.serialize(),
             "agent_log": self.agent_log_module.serialize(),
             "metrics": self.metrics.serialize(),
         }

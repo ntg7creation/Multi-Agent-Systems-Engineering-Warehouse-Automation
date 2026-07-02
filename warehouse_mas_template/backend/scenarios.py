@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Mapping, Optional
 
 from models.agent import Agent
 from models.congestion import CongestionConfig, CongestionEstimationModule
@@ -13,6 +13,7 @@ from models.perception import PerceptionModule
 from models.scenario import ScenarioConfig, parse_scenario
 from models.task import Task
 from models.engine import SimulationEngine
+from strategy_config import effective_strategy_config
 
 
 SCENARIO_DIR = Path(__file__).parent / "scenario_data"
@@ -32,10 +33,21 @@ def load_scenario_configs() -> Dict[str, ScenarioConfig]:
 def build_engine_from_scenario(
     scenario_id: str = "default",
     seed: Optional[int] = None,
+    config_overrides: Optional[Mapping[str, object]] = None,
 ) -> SimulationEngine:
     scenarios = load_scenario_configs()
     scenario = scenarios.get(scenario_id, scenarios["default"])
     active_seed = scenario.default_seed if seed is None else int(seed)
+    config = effective_strategy_config(
+        perception_radius=scenario.perception_radius,
+        allocation_strategy=scenario.allocation_strategy,
+        routing_strategy=scenario.routing_strategy,
+        path_weights=scenario.path_weights,
+        congestion=scenario.congestion,
+        overrides=config_overrides,
+    )
+    path_weights = config["path_weights"]
+    congestion = config["congestion"]
 
     warehouse_map = WarehouseMap(
         width=scenario.width,
@@ -46,29 +58,31 @@ def build_engine_from_scenario(
     )
 
     path_config = PathPlanningConfig(
-        distance_weight=float(scenario.path_weights.get("alpha_distance", 1.0)),
-        congestion_weight=float(scenario.path_weights.get("beta_congestion", 2.0)),
-        failed_route_weight=float(scenario.path_weights.get("gamma_failed_route", 1.5)),
-        uncertainty_weight=float(scenario.path_weights.get("delta_uncertainty", 0.3)),
-        occupied_penalty=float(scenario.path_weights.get("occupied_penalty", 4.0)),
-        max_candidates=int(scenario.path_weights.get("max_candidates", 6)),
-        near_optimal_margin=float(scenario.path_weights.get("near_optimal_margin", 0.35)),
+        distance_weight=float(path_weights.get("alpha_distance", 1.0)),
+        congestion_weight=float(path_weights.get("beta_congestion", 2.0)),
+        failed_route_weight=float(path_weights.get("gamma_failed_route", 1.5)),
+        uncertainty_weight=float(path_weights.get("delta_uncertainty", 0.3)),
+        occupied_penalty=float(path_weights.get("occupied_penalty", 4.0)),
+        max_candidates=int(path_weights.get("max_candidates", 6)),
+        near_optimal_margin=float(path_weights.get("near_optimal_margin", 0.35)),
+        max_expansion_multiplier=int(path_weights.get("max_expansion_multiplier", 10)),
+        congestion_region_padding=int(congestion.get("path_padding", 1)),
     )
     congestion_config = CongestionConfig(
-        decay=float(scenario.congestion.get("decay", 0.85)),
-        nearby_agent_weight=float(scenario.congestion.get("nearby_agent_weight", 1.2)),
-        waiting_weight=float(scenario.congestion.get("waiting_weight", 0.7)),
-        failed_move_weight=float(scenario.congestion.get("failed_move_weight", 1.0)),
-        blocked_path_weight=float(scenario.congestion.get("blocked_path_weight", 0.9)),
-        communicated_weight=float(scenario.congestion.get("communicated_weight", 0.5)),
-        path_padding=int(scenario.congestion.get("path_padding", 1)),
+        decay=float(congestion.get("decay", 0.85)),
+        nearby_agent_weight=float(congestion.get("nearby_agent_weight", 1.2)),
+        waiting_weight=float(congestion.get("waiting_weight", 0.7)),
+        failed_move_weight=float(congestion.get("failed_move_weight", 1.0)),
+        blocked_path_weight=float(congestion.get("blocked_path_weight", 0.9)),
+        communicated_weight=float(congestion.get("communicated_weight", 0.5)),
+        path_padding=int(congestion.get("path_padding", 1)),
     )
 
     agents = [
         Agent(
             agent_id=agent_start.agent_id,
             position=agent_start.position,
-            perception_module=PerceptionModule(radius=scenario.perception_radius),
+            perception_module=PerceptionModule(radius=int(config["perception_radius"])),
             path_planning_module=PathPlanningModule(config=path_config),
             congestion_module=CongestionEstimationModule(config=congestion_config),
         )
@@ -103,8 +117,9 @@ def build_engine_from_scenario(
         seed=active_seed,
         scenario_id=scenario.scenario_id,
         scenario_name=scenario.name,
-        allocation_strategy=scenario.allocation_strategy,
-        routing_strategy=scenario.routing_strategy,
+        allocation_strategy=str(config["allocation_strategy"]),
+        routing_strategy=str(config["routing_strategy"]),
+        config=config,
         dynamic_changes=scenario.dynamic_changes,
     )
 

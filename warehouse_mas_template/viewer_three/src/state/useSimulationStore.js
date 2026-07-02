@@ -67,10 +67,10 @@ export const useSimulationStore = create((set, get) => ({
     }
   },
 
-  reset: async ({ scenarioId = 'default', seed } = {}) => {
+  reset: async ({ scenarioId = 'default', seed, config } = {}) => {
     set({ loading: true, error: '', stateBuffer: [], bufferPlaybackActive: false })
     try {
-      const state = await simulationClient.reset({ scenarioId, seed })
+      const state = await simulationClient.reset({ scenarioId, seed, config })
       set({ state, selectedAgentId: state.agents?.[0]?.agent_id ?? null, loading: false })
     } catch (error) {
       set({ error: error.message, loading: false })

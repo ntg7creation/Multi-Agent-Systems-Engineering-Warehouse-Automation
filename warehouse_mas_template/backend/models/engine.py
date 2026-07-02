@@ -30,6 +30,7 @@ class SimulationEngine:
     scenario_name: str = "Default Warehouse"
     allocation_strategy: str = "nearest_available"
     routing_strategy: str = "local_memory_astar"
+    config: Dict[str, object] = field(default_factory=dict)
     dynamic_changes: List[Dict[str, object]] = field(default_factory=list)
     tick: int = 0
     action_log: List[Dict[str, object]] = field(default_factory=list)
@@ -321,6 +322,7 @@ class SimulationEngine:
             "name": self.scenario_name,
             "allocation_strategy": self.allocation_strategy,
             "routing_strategy": self.routing_strategy,
+            "config": self.config,
         }
 
     def log_event(

@@ -293,6 +293,9 @@ class MemoryModule:
             ],
         }
 
+    def serialize(self) -> Dict[str, object]:
+        return self.serialize_detail()
+
     @staticmethod
     def _set_newer(
         target: Dict[object, KnowledgeEntry],

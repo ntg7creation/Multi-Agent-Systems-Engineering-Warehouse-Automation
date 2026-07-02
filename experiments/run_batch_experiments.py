@@ -33,6 +33,7 @@ MAX_STEP_OVERRIDES: Dict[str, int] = {
 SUMMARY_COLUMNS = [
     "run_id",
     "experiment_label",
+    "config_profile",
     "scenario",
     "seed",
     "max_steps",
@@ -61,6 +62,7 @@ SUMMARY_COLUMNS = [
 AGENT_COLUMNS = [
     "run_id",
     "experiment_label",
+    "config_profile",
     "scenario",
     "seed",
     "agent_id",
@@ -88,6 +90,10 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from scenarios import build_engine_from_scenario  # type: ignore  # noqa: E402
+from strategy_config import (  # type: ignore  # noqa: E402
+    config_profile_from_label,
+    config_profile_overrides,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -122,6 +128,15 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Global max steps override for all scenarios.",
+    )
+    parser.add_argument(
+        "--config-profile",
+        choices=["scenario", "advanced", "baseline"],
+        default=None,
+        help=(
+            "Strategy config profile. Defaults from --experiment-label: "
+            "Baseline-* uses baseline, Advanced-* uses scenario config."
+        ),
     )
     args = parser.parse_args()
 
@@ -373,6 +388,8 @@ def render_final_map_png(final_state: Dict[str, object], out_path: Path) -> None
 
 def run_single(
     experiment_label: str,
+    config_profile: str,
+    config_overrides: Optional[Dict[str, object]],
     scenario_id: str,
     seed: int,
     max_steps: int,
@@ -381,7 +398,11 @@ def run_single(
     scenario_config = load_scenario_config(scenario_id)
     scenario_path = scenario_file_path(scenario_id)
 
-    engine = build_engine_from_scenario(scenario_id=scenario_id, seed=seed)
+    engine = build_engine_from_scenario(
+        scenario_id=scenario_id,
+        seed=seed,
+        config_overrides=config_overrides,
+    )
 
     while engine.tick < max_steps and not engine.is_complete:
         engine.step()
@@ -434,7 +455,10 @@ def run_single(
         "run_id": run_id,
         "timestamp": timestamp,
         "scenario_file_path": str(scenario_path.resolve()),
+        "config_profile": config_profile,
         "scenario_configuration": scenario_config,
+        "effective_configuration": engine.config,
+        "config_overrides": config_overrides or {},
         "final_map_renderer": map_renderer,
     }
     if map_render_error:
@@ -464,6 +488,7 @@ def run_single(
     summary_row = {
         "run_id": run_id,
         "experiment_label": experiment_label,
+        "config_profile": config_profile,
         "scenario": scenario_id,
         "seed": seed,
         "max_steps": max_steps,
@@ -497,6 +522,7 @@ def run_single(
             {
                 "run_id": run_id,
                 "experiment_label": experiment_label,
+                "config_profile": config_profile,
                 "scenario": scenario_id,
                 "seed": seed,
                 "agent_id": agent_id,
@@ -523,6 +549,8 @@ def run_single(
 def main() -> int:
     args = parse_args()
     roots = ensure_output_dirs(args.experiment_label)
+    config_profile = args.config_profile or config_profile_from_label(args.experiment_label)
+    config_overrides = config_profile_overrides(config_profile)
 
     scenarios = resolve_scenarios(args.scenarios)
     seeds = list(range(args.seed_start, args.seed_end + 1))
@@ -540,6 +568,8 @@ def main() -> int:
             try:
                 result = run_single(
                     experiment_label=args.experiment_label,
+                    config_profile=config_profile,
+                    config_overrides=config_overrides,
                     scenario_id=scenario_id,
                     seed=seed,
                     max_steps=max_steps,
@@ -572,6 +602,7 @@ def main() -> int:
                 error_row = {
                     "run_id": "",
                     "experiment_label": args.experiment_label,
+                    "config_profile": config_profile,
                     "scenario": scenario_id,
                     "seed": seed,
                     "max_steps": max_steps,

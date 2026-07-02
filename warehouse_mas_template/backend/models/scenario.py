@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
+from strategy_config import effective_strategy_config
+
 Position = Tuple[int, int]
 
 
@@ -70,6 +72,13 @@ class ScenarioConfig:
         ]
 
     def serialize_summary(self) -> Dict[str, object]:
+        config = effective_strategy_config(
+            perception_radius=self.perception_radius,
+            allocation_strategy=self.allocation_strategy,
+            routing_strategy=self.routing_strategy,
+            path_weights=self.path_weights,
+            congestion=self.congestion,
+        )
         return {
             "scenario_id": self.scenario_id,
             "name": self.name,
@@ -83,6 +92,9 @@ class ScenarioConfig:
             "perception_radius": self.perception_radius,
             "allocation_strategy": self.allocation_strategy,
             "routing_strategy": self.routing_strategy,
+            "path_weights": config["path_weights"],
+            "congestion": config["congestion"],
+            "config": config,
         }
 
 

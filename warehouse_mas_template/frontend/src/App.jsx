@@ -36,6 +36,83 @@ function formatMetric(value, digits = 3) {
   return value
 }
 
+const PATH_WEIGHT_FIELDS = [
+  { key: 'alpha_distance', label: 'alpha_distance', step: 0.05 },
+  { key: 'beta_congestion', label: 'beta_congestion', step: 0.05 },
+  { key: 'gamma_failed_route', label: 'gamma_failed_route', step: 0.05 },
+  { key: 'delta_uncertainty', label: 'delta_uncertainty', step: 0.05 },
+  { key: 'occupied_penalty', label: 'occupied_penalty', step: 0.05 },
+  { key: 'max_candidates', label: 'max_candidates', step: 1, integer: true },
+  { key: 'near_optimal_margin', label: 'near_optimal_margin', step: 0.05 },
+  { key: 'max_expansion_multiplier', label: 'max_expansion_multiplier', step: 1, integer: true },
+]
+
+const CONGESTION_FIELDS = [
+  { key: 'decay', label: 'decay', step: 0.05 },
+  { key: 'nearby_agent_weight', label: 'nearby_agent_weight', step: 0.05 },
+  { key: 'waiting_weight', label: 'waiting_weight', step: 0.05 },
+  { key: 'failed_move_weight', label: 'failed_move_weight', step: 0.05 },
+  { key: 'blocked_path_weight', label: 'blocked_path_weight', step: 0.05 },
+  { key: 'communicated_weight', label: 'communicated_weight', step: 0.05 },
+  { key: 'path_padding', label: 'path_padding', step: 1, integer: true },
+]
+
+const BASELINE_CONFIG = {
+  perception_radius: 3,
+  allocation_strategy: 'nearest_available',
+  routing_strategy: 'local_memory_astar',
+  path_weights: {
+    alpha_distance: 1.0,
+    beta_congestion: 0.0,
+    gamma_failed_route: 0.0,
+    delta_uncertainty: 0.0,
+    occupied_penalty: 0.0,
+    max_candidates: 1,
+    near_optimal_margin: 0.0,
+    max_expansion_multiplier: 10,
+  },
+  congestion: {
+    decay: 0.0,
+    nearby_agent_weight: 0.0,
+    waiting_weight: 0.0,
+    failed_move_weight: 0.0,
+    blocked_path_weight: 0.0,
+    communicated_weight: 0.0,
+    path_padding: 0,
+  },
+}
+
+function cloneConfig(config) {
+  return config ? JSON.parse(JSON.stringify(config)) : null
+}
+
+function fieldNumber(value, integer = false) {
+  if (value === '' || value === null || value === undefined) return 0
+  const parsed = integer ? parseInt(value, 10) : parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function sanitizeConfig(config) {
+  if (!config) return undefined
+  return {
+    perception_radius: fieldNumber(config.perception_radius, true),
+    allocation_strategy: config.allocation_strategy || 'nearest_available',
+    routing_strategy: config.routing_strategy || 'local_memory_astar',
+    path_weights: Object.fromEntries(
+      PATH_WEIGHT_FIELDS.map((field) => [
+        field.key,
+        fieldNumber(config.path_weights?.[field.key], field.integer),
+      ]),
+    ),
+    congestion: Object.fromEntries(
+      CONGESTION_FIELDS.map((field) => [
+        field.key,
+        fieldNumber(config.congestion?.[field.key], field.integer),
+      ]),
+    ),
+  }
+}
+
 const AGENT_PATH_COLORS = [
   '#2563eb',
   '#dc2626',
@@ -647,6 +724,8 @@ function App() {
   const [scenarios, setScenarios] = useState([])
   const [scenarioId, setScenarioId] = useState('default')
   const [seed, setSeed] = useState('42')
+  const [configDraft, setConfigDraft] = useState(null)
+  const [configDirty, setConfigDirty] = useState(false)
   const [stepDelay, setStepDelay] = useState(600)
   const [gridZoom, setGridZoom] = useState(100)
   const [selectedAgentId, setSelectedAgentId] = useState('')
@@ -672,6 +751,16 @@ function App() {
     () => state?.items?.find((item) => item.item_id === selectedTask?.item_id),
     [selectedTask, state],
   )
+
+  const selectedScenario = useMemo(
+    () => scenarios.find((scenario) => scenario.scenario_id === scenarioId),
+    [scenarioId, scenarios],
+  )
+
+  const visibleConfig = configDraft
+    ?? state?.scenario?.config
+    ?? selectedScenario?.config
+    ?? BASELINE_CONFIG
 
   const pathCells = useMemo(() => {
     const set = new Set()
@@ -758,12 +847,16 @@ function App() {
     return map
   }, [state])
 
-  async function refreshState() {
+  async function refreshState({ forceConfig = false } = {}) {
     try {
       const data = await getState()
       setState(data)
       setScenarioId(data.scenario?.scenario_id ?? 'default')
       setSeed(String(data.seed ?? ''))
+      if (forceConfig || !configDirty) {
+        setConfigDraft(cloneConfig(data.scenario?.config))
+        setConfigDirty(false)
+      }
       setSelectedAgentId((current) => current || data.agents?.[0]?.agent_id || '')
       setSelectedTaskId((current) => current || data.tasks?.[0]?.task_id || '')
       setError('')
@@ -776,6 +869,10 @@ function App() {
     try {
       const data = await getScenarios()
       setScenarios(data.scenarios ?? [])
+      if (!configDraft && !configDirty) {
+        const activeScenario = data.scenarios?.find((scenario) => scenario.scenario_id === scenarioId)
+        if (activeScenario?.config) setConfigDraft(cloneConfig(activeScenario.config))
+      }
     } catch (err) {
       setScenarios([])
     }
@@ -796,13 +893,17 @@ function App() {
     }
   }
 
-  async function perform(action) {
+  async function perform(action, { syncConfig = false } = {}) {
     try {
       const data = await action()
       if (data?.tick !== undefined) {
         setState(data)
+        if (syncConfig || !configDirty) {
+          setConfigDraft(cloneConfig(data.scenario?.config))
+          setConfigDirty(false)
+        }
       } else {
-        await refreshState()
+        await refreshState({ forceConfig: syncConfig })
       }
       await refreshAnalytics()
       setError('')
@@ -828,6 +929,39 @@ function App() {
     }
   }
 
+  function handleScenarioChange(nextScenarioId) {
+    setScenarioId(nextScenarioId)
+    const nextScenario = scenarios.find((scenario) => scenario.scenario_id === nextScenarioId)
+    if (nextScenario?.config) {
+      setConfigDraft(cloneConfig(nextScenario.config))
+      setConfigDirty(false)
+    }
+  }
+
+  function updateConfigField(section, key, value) {
+    setConfigDirty(true)
+    setConfigDraft((current) => {
+      const base = cloneConfig(current ?? visibleConfig)
+      if (section === 'root') {
+        base[key] = value
+      } else {
+        base[section] = { ...(base[section] ?? {}), [key]: value }
+      }
+      return base
+    })
+  }
+
+  function applyScenarioConfig() {
+    const source = selectedScenario?.config ?? state?.scenario?.config
+    setConfigDraft(cloneConfig(source))
+    setConfigDirty(false)
+  }
+
+  function applyBaselineConfig() {
+    setConfigDraft(cloneConfig(BASELINE_CONFIG))
+    setConfigDirty(true)
+  }
+
   useEffect(() => {
     refreshScenarios()
     refreshState()
@@ -838,7 +972,7 @@ function App() {
     if (!state?.autorun?.active) return undefined
     const id = setInterval(refreshState, Math.max(150, stepDelay))
     return () => clearInterval(id)
-  }, [state?.autorun?.active, stepDelay])
+  }, [state?.autorun?.active, stepDelay, configDirty])
 
   useEffect(() => {
     if (!state?.autorun?.active) return undefined
@@ -863,7 +997,7 @@ function App() {
         <div className="scenario-controls">
           <label>
             Scenario
-            <select value={scenarioId} onChange={(event) => setScenarioId(event.target.value)}>
+            <select value={scenarioId} onChange={(event) => handleScenarioChange(event.target.value)}>
               {scenarios.map((scenario) => (
                 <option key={scenario.scenario_id} value={scenario.scenario_id}>
                   {scenario.name}
@@ -879,7 +1013,11 @@ function App() {
               onChange={(event) => setSeed(event.target.value)}
             />
           </label>
-          <button onClick={() => perform(() => resetSimulation({ scenarioId, seed: Number(seed) }))}>
+          <button onClick={() => perform(() => resetSimulation({
+            scenarioId,
+            seed: seed === '' ? undefined : Number(seed),
+            config: sanitizeConfig(visibleConfig),
+          }), { syncConfig: true })}>
             Reset
           </button>
         </div>
@@ -940,6 +1078,85 @@ function App() {
           </button>
         </div>
         <button className="secondary" onClick={refreshState}>Refresh</button>
+      </section>
+
+      <section className="config-panel">
+        <div className="config-header">
+          <h2>Strategy Config</h2>
+          <div className="config-actions">
+            <button className="secondary" type="button" onClick={applyScenarioConfig}>Scenario</button>
+            <button className="secondary" type="button" onClick={applyBaselineConfig}>Baseline</button>
+          </div>
+        </div>
+
+        <div className="config-grid root-config">
+          <label>
+            perception_radius
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={visibleConfig?.perception_radius ?? ''}
+              onChange={(event) => updateConfigField('root', 'perception_radius', event.target.value)}
+            />
+          </label>
+          <label>
+            allocation_strategy
+            <select
+              value={visibleConfig?.allocation_strategy ?? 'nearest_available'}
+              onChange={(event) => updateConfigField('root', 'allocation_strategy', event.target.value)}
+            >
+              <option value="nearest_available">nearest_available</option>
+            </select>
+          </label>
+          <label>
+            routing_strategy
+            <select
+              value={visibleConfig?.routing_strategy ?? 'local_memory_astar'}
+              onChange={(event) => updateConfigField('root', 'routing_strategy', event.target.value)}
+            >
+              <option value="local_memory_astar">local_memory_astar</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="config-columns">
+          <div className="config-group">
+            <h3>path_weights</h3>
+            <div className="config-grid">
+              {PATH_WEIGHT_FIELDS.map((field) => (
+                <label key={field.key}>
+                  {field.label}
+                  <input
+                    type="number"
+                    step={field.step}
+                    min={field.integer ? 0 : undefined}
+                    value={visibleConfig?.path_weights?.[field.key] ?? ''}
+                    onChange={(event) => updateConfigField('path_weights', field.key, event.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="config-group">
+            <h3>congestion</h3>
+            <div className="config-grid">
+              {CONGESTION_FIELDS.map((field) => (
+                <label key={field.key}>
+                  {field.label}
+                  <input
+                    type="number"
+                    step={field.step}
+                    min={field.integer ? 0 : undefined}
+                    value={visibleConfig?.congestion?.[field.key] ?? ''}
+                    onChange={(event) => updateConfigField('congestion', field.key, event.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       {error && <div className="error">{error}</div>}

@@ -21,6 +21,7 @@ export function InspectorPanel() {
   const tasks = state?.tasks ?? []
   const selectedAgent = agents.find((agent) => agent.agent_id === selectedAgentId) ?? agents[0]
   const selectedMetrics = selectedAgent ? state?.metrics?.agents?.[selectedAgent.agent_id] : null
+  const config = state?.scenario?.config
 
   return (
     <aside className="inspector-panel">
@@ -52,6 +53,24 @@ export function InspectorPanel() {
           </div>
         ) : (
           <p className="empty">No agent selected.</p>
+        )}
+      </section>
+
+      <section>
+        <h2>Strategy Config</h2>
+        {config ? (
+          <div className="details-grid">
+            <Detail label="Radius" value={config.perception_radius} />
+            <Detail label="alpha_distance" value={config.path_weights?.alpha_distance} />
+            <Detail label="beta_congestion" value={config.path_weights?.beta_congestion} />
+            <Detail label="gamma_failed_route" value={config.path_weights?.gamma_failed_route} />
+            <Detail label="delta_uncertainty" value={config.path_weights?.delta_uncertainty} />
+            <Detail label="near_optimal_margin" value={config.path_weights?.near_optimal_margin} />
+            <Detail label="decay" value={config.congestion?.decay} />
+            <Detail label="path_padding" value={config.congestion?.path_padding} />
+          </div>
+        ) : (
+          <p className="empty">No config loaded.</p>
         )}
       </section>
 

@@ -18,13 +18,14 @@ DIRECTION_VECTORS: Dict[str, Tuple[int, int]] = {
 @dataclass
 class PathPlanningConfig:
     distance_weight: float = 1.0
-    congestion_weight: float = 0.0
-    failed_route_weight: float = 0.0
-    uncertainty_weight: float = 0.0
-    occupied_penalty: float = 0.0
-    max_candidates: int = 1
-    near_optimal_margin: float = 0.0
+    congestion_weight: float = 2.0
+    failed_route_weight: float = 1.5
+    uncertainty_weight: float = 0.3
+    occupied_penalty: float = 4.0
+    max_candidates: int = 6
+    near_optimal_margin: float = 0.35
     max_expansion_multiplier: int = 10
+    congestion_region_padding: int = 1
 
 
 @dataclass
@@ -120,7 +121,11 @@ class PathPlanningModule:
         if not path:
             return 999999.0
         distance = max(0, len(path) - 1)
-        congestion = self._region_congestion(path, memory)
+        congestion = self._region_congestion(
+            path,
+            memory,
+            padding=self.config.congestion_region_padding,
+        )
         failed = sum(
             memory.cell_history_for(cell).failed_move_attempts
             + memory.cell_history_for(cell).blocked_path_events
@@ -148,6 +153,11 @@ class PathPlanningModule:
                 "beta_congestion": self.config.congestion_weight,
                 "gamma_failed_route": self.config.failed_route_weight,
                 "delta_uncertainty": self.config.uncertainty_weight,
+                "occupied_penalty": self.config.occupied_penalty,
+                "max_candidates": self.config.max_candidates,
+                "near_optimal_margin": self.config.near_optimal_margin,
+                "max_expansion_multiplier": self.config.max_expansion_multiplier,
+                "congestion_region_padding": self.config.congestion_region_padding,
             },
         }
 

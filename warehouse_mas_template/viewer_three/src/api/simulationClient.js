@@ -26,10 +26,10 @@ export const simulationClient = {
       method: 'POST',
       body: JSON.stringify({ steps }),
     }),
-  reset: ({ scenarioId = 'default', seed } = {}) =>
+  reset: ({ scenarioId = 'default', seed, config } = {}) =>
     request('/reset', {
       method: 'POST',
-      body: JSON.stringify({ scenario_id: scenarioId, seed }),
+      body: JSON.stringify({ scenario_id: scenarioId, seed, config }),
     }),
   start: ({ delayMs = 600, maxTicks = null } = {}) =>
     request('/start', {

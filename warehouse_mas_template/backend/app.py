@@ -36,6 +36,11 @@ def optional_int(value: object) -> Optional[int]:
         return None
 
 
+def config_overrides(data: dict) -> Optional[dict]:
+    raw = data.get("config", data.get("config_overrides"))
+    return raw if isinstance(raw, dict) else None
+
+
 @app.get("/api/health")
 def health():
     return jsonify({"ok": True, "service": "warehouse-mas-backend"})
@@ -155,7 +160,11 @@ def load_scenario():
     data = payload()
     scenario_id = str(data.get("scenario_id") or "default")
     seed = optional_int(data.get("seed"))
-    return jsonify(simulation.load_scenario(scenario_id=scenario_id, seed=seed))
+    return jsonify(simulation.load_scenario(
+        scenario_id=scenario_id,
+        seed=seed,
+        config_overrides=config_overrides(data),
+    ))
 
 
 @app.post("/api/reset")
@@ -163,7 +172,11 @@ def reset():
     data = payload()
     scenario_id = str(data.get("scenario_id") or "default")
     seed = optional_int(data.get("seed"))
-    return jsonify(simulation.reset(scenario_id=scenario_id, seed=seed))
+    return jsonify(simulation.reset(
+        scenario_id=scenario_id,
+        seed=seed,
+        config_overrides=config_overrides(data),
+    ))
 
 
 @app.post("/api/tick")

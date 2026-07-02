@@ -63,6 +63,19 @@ class CongestionEstimationModule:
             return 0.0
         return sum(memory.congestion_score(cell) for cell in region) / len(region)
 
+    def serialize(self) -> Dict[str, object]:
+        return {
+            "config": {
+                "decay": self.config.decay,
+                "nearby_agent_weight": self.config.nearby_agent_weight,
+                "waiting_weight": self.config.waiting_weight,
+                "failed_move_weight": self.config.failed_move_weight,
+                "blocked_path_weight": self.config.blocked_path_weight,
+                "communicated_weight": self.config.communicated_weight,
+                "path_padding": self.config.path_padding,
+            },
+        }
+
     @staticmethod
     def path_region(path: Iterable[Position], padding: int = 1) -> Set[Position]:
         region: Set[Position] = set()
