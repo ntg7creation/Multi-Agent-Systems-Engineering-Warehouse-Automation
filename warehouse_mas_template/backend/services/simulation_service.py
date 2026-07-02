@@ -115,7 +115,10 @@ class SimulationService:
 
     def step(self, steps: int = 1) -> Dict[str, object]:
         with self._lock:
-            return self._engine.run_steps(steps)
+            state = self._engine.run_steps(steps)
+            if self._engine.is_complete:
+                self._autorun_active = False
+            return state
 
     def start_autorun(
         self,
@@ -124,6 +127,9 @@ class SimulationService:
     ) -> Dict[str, object]:
         delay_ms = max(50, min(int(delay_ms), 10000))
         with self._lock:
+            if self._engine.is_complete:
+                self._autorun_active = False
+                return self.autorun_status()
             if self._autorun_active:
                 return self.autorun_status()
             self._autorun_active = True

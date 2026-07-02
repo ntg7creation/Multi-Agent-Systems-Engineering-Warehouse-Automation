@@ -77,6 +77,7 @@ class SimulationEngine:
 
     def step(self) -> Dict[str, object]:
         if self.is_complete:
+            self._finalize_completion()
             return self.serialize_state()
 
         before_state = self._replay_state_snapshot()
@@ -171,13 +172,7 @@ class SimulationEngine:
         self.replay_log.record(replay_frame)
         self.analytics.record_replay_frame(replay_frame)
 
-        if self.is_complete and not self._completion_logged:
-            self._completion_logged = True
-            self.log_event(
-                "SIMULATION_COMPLETED",
-                f"Scenario '{self.scenario_id}' completed in {self.tick} ticks.",
-                result="success",
-            )
+        self._finalize_completion()
 
         return self.serialize_state()
 
@@ -193,6 +188,16 @@ class SimulationEngine:
     @property
     def is_complete(self) -> bool:
         return bool(self.tasks) and all(task.status == "delivered" for task in self.tasks)
+
+    def _finalize_completion(self) -> None:
+        if not self.is_complete or self._completion_logged:
+            return
+        self._completion_logged = True
+        self.log_event(
+            "SIMULATION_COMPLETED",
+            f"Scenario '{self.scenario_id}' completed in {self.tick} ticks.",
+            result="success",
+        )
 
     def item_position(self, item_id: str) -> Optional[Position]:
         item = self.items.get(item_id)

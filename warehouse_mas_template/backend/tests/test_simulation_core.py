@@ -231,6 +231,33 @@ def test_metrics_and_logs_update_after_completion():
     assert engine.serialize_replay()["frames"]
 
 
+def test_step_after_completion_does_not_advance_tick_or_congestion():
+    engine = build_engine_from_scenario("simple_one_agent_delivery")
+    for _ in range(30):
+        engine.step()
+        if engine.is_complete:
+            break
+
+    assert engine.is_complete is True
+    completed_tick = engine.tick
+    replay_frame_count = len(engine.serialize_replay()["frames"])
+    congestion_snapshots = {
+        agent.agent_id: agent.memory_module.serialize().get("congestion", [])
+        for agent in engine.agents
+    }
+
+    engine.step()
+    engine.run_steps(10)
+
+    assert engine.tick == completed_tick
+    assert engine.metrics.total_steps == completed_tick
+    assert len(engine.serialize_replay()["frames"]) == replay_frame_count
+    assert {
+        agent.agent_id: agent.memory_module.serialize().get("congestion", [])
+        for agent in engine.agents
+    } == congestion_snapshots
+
+
 def test_analytics_summary_and_exports_are_available():
     engine = build_engine_from_scenario("simple_one_agent_delivery")
     for _ in range(30):

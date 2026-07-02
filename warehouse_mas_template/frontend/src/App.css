@@ -108,6 +108,34 @@ h2 {
   text-transform: uppercase;
 }
 
+.completion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(22, 35, 55, 0.06);
+}
+
+.completion-copy {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.completion-copy strong {
+  color: #172033;
+}
+
+.completion-copy span,
+.export-status {
+  color: #607089;
+}
+
 label {
   display: flex;
   align-items: center;
@@ -614,6 +642,12 @@ select {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  cursor: pointer;
+}
+
+.download-button:disabled {
+  opacity: 0.62;
+  cursor: progress;
 }
 
 .analytics-stats {
