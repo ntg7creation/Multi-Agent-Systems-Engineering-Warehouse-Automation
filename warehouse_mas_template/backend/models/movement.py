@@ -18,12 +18,12 @@ DIRECTION_VECTORS: Dict[str, Tuple[int, int]] = {
 @dataclass
 class PathPlanningConfig:
     distance_weight: float = 1.0
-    congestion_weight: float = 2.0
-    failed_route_weight: float = 1.5
-    uncertainty_weight: float = 0.3
-    occupied_penalty: float = 4.0
-    max_candidates: int = 6
-    near_optimal_margin: float = 0.35
+    congestion_weight: float = 0.0
+    failed_route_weight: float = 0.0
+    uncertainty_weight: float = 0.0
+    occupied_penalty: float = 0.0
+    max_candidates: int = 1
+    near_optimal_margin: float = 0.0
     max_expansion_multiplier: int = 10
 
 

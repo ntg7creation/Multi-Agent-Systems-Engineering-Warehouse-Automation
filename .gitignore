@@ -11,4 +11,3 @@ dist/
 *.gltf
 !**/.gitkeep
 /experiments/outputs/
-.idea/
