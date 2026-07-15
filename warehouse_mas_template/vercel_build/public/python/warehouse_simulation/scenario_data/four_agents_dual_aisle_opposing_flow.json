@@ -1,122 +1,82 @@
 {
-  "scenario_id": "four_agents_adjacent_access_cluster",
-  "name": "Four Agents, Obstacle-Surrounded Access Points",
-  "description": "Four agents serve pickup and delivery cells that are mostly surrounded by obstacles. Every interaction must happen from the one valid adjacent access cell, testing correct pickup and placement rules under multi-agent pressure.",
+  "scenario_id": "four_agents_dual_aisle_opposing_flow",
+  "name": "Four Agents, Dual-Aisle Opposing Flow",
+  "description": "Four agents move in opposite directions through two parallel aisles connected by limited crossover points. It tests congestion-aware detours rather than a single central crossing.",
   "grid": {
-    "width": 16,
-    "height": 10,
+    "width": 18,
+    "height": 9,
     "blocked": [
       [
-        0,
-        5
-      ],
-      [
-        1,
+        2,
         2
       ],
       [
-        1,
-        4
-      ],
-      [
-        1,
+        2,
         6
-      ],
-      [
-        2,
-        1
-      ],
-      [
-        2,
-        3
       ],
       [
         3,
-        7
-      ],
-      [
-        4,
-        8
-      ],
-      [
-        5,
-        7
-      ],
-      [
-        6,
-        1
-      ],
-      [
-        6,
         2
       ],
       [
-        6,
-        4
-      ],
-      [
-        6,
-        5
-      ],
-      [
-        6,
-        8
-      ],
-      [
-        7,
-        1
-      ],
-      [
-        7,
-        5
-      ],
-      [
-        8,
-        2
-      ],
-      [
-        8,
-        4
-      ],
-      [
-        9,
-        5
-      ],
-      [
-        10,
+        3,
         6
       ],
       [
-        10,
-        8
+        4,
+        2
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        7,
+        2
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        8,
+        2
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        6
       ],
       [
         11,
-        1
+        2
       ],
       [
         11,
-        4
-      ],
-      [
-        11,
-        5
-      ],
-      [
-        11,
-        7
-      ],
-      [
-        11,
-        8
+        6
       ],
       [
         12,
-        1
+        2
       ],
       [
         12,
-        3
+        6
       ],
       [
         13,
@@ -124,81 +84,81 @@
       ],
       [
         13,
-        7
-      ],
-      [
-        14,
-        8
+        6
       ],
       [
         15,
-        7
+        2
+      ],
+      [
+        15,
+        6
       ]
     ]
   },
   "pickups": {
     "pickup_a": [
-      2,
-      2
+      1,
+      1
     ],
     "pickup_b": [
-      7,
-      2
+      1,
+      7
     ],
     "pickup_c": [
-      12,
-      2
+      6,
+      4
     ],
     "pickup_d": [
-      4,
-      7
+      15,
+      4
     ]
   },
   "dropoffs": {
     "dropoff_a": [
-      10,
+      16,
       7
     ],
     "dropoff_b": [
-      14,
-      7
+      16,
+      1
     ],
     "dropoff_c": [
-      8,
-      5
+      11,
+      4
     ],
     "dropoff_d": [
-      1,
-      5
+      4,
+      4
     ]
   },
   "agents": [
     {
       "agent_id": "agent_1",
       "position": [
-        1,
+        3,
         1
       ]
     },
     {
       "agent_id": "agent_2",
       "position": [
-        5,
-        5
+        3,
+        7
       ]
     },
     {
       "agent_id": "agent_3",
       "position": [
-        10,
-        3
+        14,
+        1
       ]
     },
     {
       "agent_id": "agent_4",
       "position": [
-        15,
-        8
+        14,
+        7
       ]
     }
   ],
@@ -254,7 +214,7 @@
       "item_id": "box_4"
     }
   ],
-  "default_seed": 113,
+  "default_seed": 89,
   "config": {
     "perception_radius": 3,
     "allocation_strategy": "nearest_available",
@@ -275,7 +235,4 @@
       "path_padding": 1
     }
   }
-  
 }
-
-

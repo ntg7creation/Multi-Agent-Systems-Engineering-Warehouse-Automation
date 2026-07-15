@@ -1,0 +1,26 @@
+{
+  "name": "warehouse-mas-vercel-build",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/copy-pyodide.mjs && vite --host 127.0.0.1",
+    "build": "node scripts/copy-pyodide.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node scripts/check-js-syntax.mjs && node scripts/pyodide-smoke.mjs",
+    "typecheck": "node scripts/typecheck.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.17.10",
+    "pyodide": "^0.27.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.170.0",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "vite": "^5.4.11"
+  }
+}

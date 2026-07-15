@@ -1,0 +1,35 @@
+{
+  "scenario_id": "blocked_route_replanning",
+  "name": "Blocked Route Replanning",
+  "description": "A static obstacle wall forces the agent to discover and route around a detour.",
+  "grid": {
+    "width": 12,
+    "height": 7,
+    "blocked": [[5, 0], [5, 1], [5, 2], [5, 3], [5, 5], [5, 6]]
+  },
+  "pickups": {
+    "pickup_a": [1, 3]
+  },
+  "dropoffs": {
+    "dropoff_a": [10, 3]
+  },
+  "agents": [
+    {"agent_id": "agent_1", "position": [2, 3]}
+  ],
+  "items": [
+    {"item_id": "box_1", "task_id": "delivery_1", "pickup_id": "pickup_a", "dropoff_id": "dropoff_a"}
+  ],
+  "tasks": [
+    {"task_id": "delivery_1", "pickup_id": "pickup_a", "dropoff_id": "dropoff_a", "item_id": "box_1"}
+  ],
+  "default_seed": 31,
+  "config": {
+    "perception_radius": 2,
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.0,
+      "gamma_failed_route": 2.0,
+      "delta_uncertainty": 0.2
+    }
+  }
+}

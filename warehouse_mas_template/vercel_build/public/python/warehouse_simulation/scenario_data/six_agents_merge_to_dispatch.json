@@ -1,48 +1,44 @@
 {
-  "scenario_id": "four_agents_adjacent_access_cluster",
-  "name": "Four Agents, Obstacle-Surrounded Access Points",
-  "description": "Four agents serve pickup and delivery cells that are mostly surrounded by obstacles. Every interaction must happen from the one valid adjacent access cell, testing correct pickup and placement rules under multi-agent pressure.",
+  "scenario_id": "six_agents_merge_to_dispatch",
+  "name": "Six Agents, Merge Toward Dispatch",
+  "description": "Six agents collect items from both warehouse sides and converge on a narrow central dispatch zone, producing repeated merge conflicts and congestion.",
   "grid": {
-    "width": 16,
-    "height": 10,
+    "width": 18,
+    "height": 12,
     "blocked": [
       [
-        0,
-        5
-      ],
-      [
-        1,
-        2
-      ],
-      [
-        1,
-        4
-      ],
-      [
-        1,
-        6
-      ],
-      [
-        2,
+        5,
         1
       ],
       [
-        2,
-        3
+        5,
+        2
       ],
       [
-        3,
-        7
+        5,
+        4
       ],
       [
-        4,
-        8
+        5,
+        5
+      ],
+      [
+        5,
+        6
       ],
       [
         5,
         7
       ],
       [
+        5,
+        9
+      ],
+      [
+        5,
+        10
+      ],
+      [
         6,
         1
       ],
@@ -52,7 +48,7 @@
       ],
       [
         6,
-        4
+        3
       ],
       [
         6,
@@ -60,39 +56,27 @@
       ],
       [
         6,
-        8
-      ],
-      [
-        7,
-        1
-      ],
-      [
-        7,
-        5
-      ],
-      [
-        8,
-        2
-      ],
-      [
-        8,
-        4
-      ],
-      [
-        9,
-        5
-      ],
-      [
-        10,
         6
       ],
       [
-        10,
+        6,
         8
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        10
       ],
       [
         11,
         1
+      ],
+      [
+        11,
+        2
       ],
       [
         11,
@@ -101,6 +85,10 @@
       [
         11,
         5
+      ],
+      [
+        11,
+        6
       ],
       [
         11,
@@ -108,97 +96,139 @@
       ],
       [
         11,
-        8
+        9
+      ],
+      [
+        11,
+        10
       ],
       [
         12,
         1
+      ],
+      [
+        12,
+        2
       ],
       [
         12,
         3
       ],
       [
-        13,
-        2
+        12,
+        5
       ],
       [
-        13,
-        7
+        12,
+        6
       ],
       [
-        14,
+        12,
         8
       ],
       [
-        15,
-        7
+        12,
+        9
+      ],
+      [
+        12,
+        10
       ]
     ]
   },
   "pickups": {
     "pickup_a": [
-      2,
-      2
+      1,
+      1
     ],
     "pickup_b": [
-      7,
-      2
+      1,
+      4
     ],
     "pickup_c": [
-      12,
-      2
+      1,
+      8
     ],
     "pickup_d": [
-      4,
-      7
+      16,
+      2
+    ],
+    "pickup_e": [
+      16,
+      6
+    ],
+    "pickup_f": [
+      16,
+      10
     ]
   },
   "dropoffs": {
     "dropoff_a": [
-      10,
-      7
+      8,
+      1
     ],
     "dropoff_b": [
-      14,
-      7
+      8,
+      3
     ],
     "dropoff_c": [
       8,
       5
     ],
     "dropoff_d": [
-      1,
-      5
+      8,
+      7
+    ],
+    "dropoff_e": [
+      8,
+      9
+    ],
+    "dropoff_f": [
+      8,
+      10
     ]
   },
   "agents": [
     {
       "agent_id": "agent_1",
       "position": [
-        1,
-        1
+        2,
+        2
       ]
     },
     {
       "agent_id": "agent_2",
       "position": [
-        5,
-        5
+        2,
+        6
       ]
     },
     {
       "agent_id": "agent_3",
       "position": [
-        10,
-        3
+        2,
+        9
       ]
     },
     {
       "agent_id": "agent_4",
       "position": [
         15,
-        8
+        2
+      ]
+    },
+    {
+      "agent_id": "agent_5",
+      "position": [
+        15,
+        5
+      ]
+    },
+    {
+      "agent_id": "agent_6",
+      "position": [
+        15,
+        9
       ]
     }
   ],
@@ -207,56 +237,80 @@
       "item_id": "box_1",
       "task_id": "delivery_1",
       "pickup_id": "pickup_a",
-      "dropoff_id": "dropoff_a"
+      "dropoff_id": "dropoff_d"
     },
     {
       "item_id": "box_2",
       "task_id": "delivery_2",
       "pickup_id": "pickup_b",
-      "dropoff_id": "dropoff_b"
+      "dropoff_id": "dropoff_e"
     },
     {
       "item_id": "box_3",
       "task_id": "delivery_3",
       "pickup_id": "pickup_c",
-      "dropoff_id": "dropoff_c"
+      "dropoff_id": "dropoff_f"
     },
     {
       "item_id": "box_4",
       "task_id": "delivery_4",
       "pickup_id": "pickup_d",
-      "dropoff_id": "dropoff_d"
+      "dropoff_id": "dropoff_a"
+    },
+    {
+      "item_id": "box_5",
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_b"
+    },
+    {
+      "item_id": "box_6",
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_c"
     }
   ],
   "tasks": [
     {
       "task_id": "delivery_1",
       "pickup_id": "pickup_a",
-      "dropoff_id": "dropoff_a",
+      "dropoff_id": "dropoff_d",
       "item_id": "box_1"
     },
     {
       "task_id": "delivery_2",
       "pickup_id": "pickup_b",
-      "dropoff_id": "dropoff_b",
+      "dropoff_id": "dropoff_e",
       "item_id": "box_2"
     },
     {
       "task_id": "delivery_3",
       "pickup_id": "pickup_c",
-      "dropoff_id": "dropoff_c",
+      "dropoff_id": "dropoff_f",
       "item_id": "box_3"
     },
     {
       "task_id": "delivery_4",
       "pickup_id": "pickup_d",
-      "dropoff_id": "dropoff_d",
+      "dropoff_id": "dropoff_a",
       "item_id": "box_4"
+    },
+    {
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_b",
+      "item_id": "box_5"
+    },
+    {
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_c",
+      "item_id": "box_6"
     }
   ],
-  "default_seed": 113,
+  "default_seed": 97,
   "config": {
-    "perception_radius": 3,
+    "perception_radius": 4,
     "allocation_strategy": "nearest_available",
     "routing_strategy": "local_memory_astar",
     "path_weights": {
@@ -275,7 +329,4 @@
       "path_padding": 1
     }
   }
-  
 }
-
-

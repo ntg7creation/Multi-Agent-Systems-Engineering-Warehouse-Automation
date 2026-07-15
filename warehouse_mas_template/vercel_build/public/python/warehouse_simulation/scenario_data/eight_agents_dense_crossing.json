@@ -1,37 +1,29 @@
 {
-  "scenario_id": "four_agents_adjacent_access_cluster",
-  "name": "Four Agents, Obstacle-Surrounded Access Points",
-  "description": "Four agents serve pickup and delivery cells that are mostly surrounded by obstacles. Every interaction must happen from the one valid adjacent access cell, testing correct pickup and placement rules under multi-agent pressure.",
+  "scenario_id": "eight_agents_dense_crossing",
+  "name": "Eight Agents, Dense Multi-Zone Crossing",
+  "description": "Eight agents receive cross-warehouse tasks through a compact shelf layout. It is a high-density test of traffic interactions, communication, replanning, and throughput.",
   "grid": {
-    "width": 16,
-    "height": 10,
+    "width": 20,
+    "height": 12,
     "blocked": [
       [
-        0,
-        5
-      ],
-      [
-        1,
-        2
-      ],
-      [
-        1,
-        4
-      ],
-      [
-        1,
-        6
-      ],
-      [
-        2,
+        4,
         1
       ],
       [
-        2,
+        4,
         3
       ],
       [
-        3,
+        4,
+        4
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        4,
         7
       ],
       [
@@ -39,36 +31,8 @@
         8
       ],
       [
-        5,
-        7
-      ],
-      [
-        6,
-        1
-      ],
-      [
-        6,
-        2
-      ],
-      [
-        6,
-        4
-      ],
-      [
-        6,
-        5
-      ],
-      [
-        6,
-        8
-      ],
-      [
-        7,
-        1
-      ],
-      [
-        7,
-        5
+        4,
+        10
       ],
       [
         8,
@@ -76,39 +40,23 @@
       ],
       [
         8,
-        4
+        3
       ],
       [
-        9,
+        8,
         5
       ],
       [
-        10,
+        8,
         6
       ],
       [
-        10,
+        8,
         8
       ],
       [
-        11,
-        1
-      ],
-      [
-        11,
-        4
-      ],
-      [
-        11,
-        5
-      ],
-      [
-        11,
-        7
-      ],
-      [
-        11,
-        8
+        8,
+        9
       ],
       [
         12,
@@ -119,86 +67,174 @@
         3
       ],
       [
-        13,
-        2
+        12,
+        4
       ],
       [
-        13,
+        12,
+        5
+      ],
+      [
+        12,
         7
       ],
       [
-        14,
+        12,
         8
       ],
       [
-        15,
+        12,
+        10
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        6
+      ],
+      [
+        16,
         7
+      ],
+      [
+        16,
+        9
       ]
     ]
   },
   "pickups": {
     "pickup_a": [
-      2,
-      2
+      1,
+      1
     ],
     "pickup_b": [
-      7,
-      2
+      1,
+      4
     ],
     "pickup_c": [
-      12,
-      2
+      1,
+      7
     ],
     "pickup_d": [
-      4,
-      7
+      1,
+      10
+    ],
+    "pickup_e": [
+      6,
+      2
+    ],
+    "pickup_f": [
+      6,
+      8
+    ],
+    "pickup_g": [
+      13,
+      3
+    ],
+    "pickup_h": [
+      13,
+      9
     ]
   },
   "dropoffs": {
     "dropoff_a": [
-      10,
-      7
+      18,
+      10
     ],
     "dropoff_b": [
-      14,
+      18,
       7
     ],
     "dropoff_c": [
-      8,
-      5
+      18,
+      4
     ],
     "dropoff_d": [
-      1,
-      5
+      18,
+      1
+    ],
+    "dropoff_e": [
+      14,
+      8
+    ],
+    "dropoff_f": [
+      14,
+      2
+    ],
+    "dropoff_g": [
+      7,
+      9
+    ],
+    "dropoff_h": [
+      7,
+      3
     ]
   },
   "agents": [
     {
       "agent_id": "agent_1",
       "position": [
-        1,
-        1
+        2,
+        2
       ]
     },
     {
       "agent_id": "agent_2",
       "position": [
-        5,
+        2,
         5
       ]
     },
     {
       "agent_id": "agent_3",
       "position": [
-        10,
-        3
+        2,
+        8
       ]
     },
     {
       "agent_id": "agent_4",
       "position": [
-        15,
+        2,
+        10
+      ]
+    },
+    {
+      "agent_id": "agent_5",
+      "position": [
+        17,
+        2
+      ]
+    },
+    {
+      "agent_id": "agent_6",
+      "position": [
+        17,
+        5
+      ]
+    },
+    {
+      "agent_id": "agent_7",
+      "position": [
+        17,
         8
+      ]
+    },
+    {
+      "agent_id": "agent_8",
+      "position": [
+        17,
+        10
       ]
     }
   ],
@@ -226,6 +262,30 @@
       "task_id": "delivery_4",
       "pickup_id": "pickup_d",
       "dropoff_id": "dropoff_d"
+    },
+    {
+      "item_id": "box_5",
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_e"
+    },
+    {
+      "item_id": "box_6",
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_f"
+    },
+    {
+      "item_id": "box_7",
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_g",
+      "dropoff_id": "dropoff_g"
+    },
+    {
+      "item_id": "box_8",
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_h",
+      "dropoff_id": "dropoff_h"
     }
   ],
   "tasks": [
@@ -252,9 +312,33 @@
       "pickup_id": "pickup_d",
       "dropoff_id": "dropoff_d",
       "item_id": "box_4"
+    },
+    {
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_e",
+      "item_id": "box_5"
+    },
+    {
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_f",
+      "item_id": "box_6"
+    },
+    {
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_g",
+      "dropoff_id": "dropoff_g",
+      "item_id": "box_7"
+    },
+    {
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_h",
+      "dropoff_id": "dropoff_h",
+      "item_id": "box_8"
     }
   ],
-  "default_seed": 113,
+  "default_seed": 103,
   "config": {
     "perception_radius": 3,
     "allocation_strategy": "nearest_available",
@@ -275,7 +359,4 @@
       "path_padding": 1
     }
   }
-  
 }
-
-

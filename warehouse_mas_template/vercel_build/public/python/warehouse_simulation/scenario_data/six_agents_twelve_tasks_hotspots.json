@@ -1,0 +1,356 @@
+{
+  "scenario_id": "six_agents_twelve_tasks_hotspots",
+  "name": "Six Agents, Twelve Tasks With Hotspots",
+  "description": "A six-agent queue of twelve deliveries repeatedly draws traffic through two central pickup and drop-off hotspots. It is suited for throughput, waiting, congestion, and allocation analysis.",
+  "grid": {
+    "width": 18,
+    "height": 12,
+    "blocked": [
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        5,
+        4
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        5,
+        9
+      ],
+      [
+        5,
+        10
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        3
+      ],
+      [
+        9,
+        5
+      ],
+      [
+        9,
+        6
+      ],
+      [
+        9,
+        8
+      ],
+      [
+        9,
+        9
+      ],
+      [
+        13,
+        1
+      ],
+      [
+        13,
+        2
+      ],
+      [
+        13,
+        4
+      ],
+      [
+        13,
+        5
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        13,
+        8
+      ],
+      [
+        13,
+        10
+      ]
+    ]
+  },
+  "pickups": {
+    "pickup_a": [
+      1,
+      2
+    ],
+    "pickup_b": [
+      1,
+      4
+    ],
+    "pickup_c": [
+      1,
+      6
+    ],
+    "pickup_d": [
+      1,
+      8
+    ],
+    "pickup_e": [
+      6,
+      5
+    ],
+    "pickup_f": [
+      10,
+      5
+    ]
+  },
+  "dropoffs": {
+    "dropoff_a": [
+      16,
+      1
+    ],
+    "dropoff_b": [
+      16,
+      3
+    ],
+    "dropoff_c": [
+      16,
+      5
+    ],
+    "dropoff_d": [
+      16,
+      7
+    ],
+    "dropoff_e": [
+      16,
+      9
+    ],
+    "dropoff_f": [
+      14,
+      5
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "agent_1",
+      "position": [
+        2,
+        1
+      ]
+    },
+    {
+      "agent_id": "agent_2",
+      "position": [
+        2,
+        3
+      ]
+    },
+    {
+      "agent_id": "agent_3",
+      "position": [
+        2,
+        5
+      ]
+    },
+    {
+      "agent_id": "agent_4",
+      "position": [
+        2,
+        7
+      ]
+    },
+    {
+      "agent_id": "agent_5",
+      "position": [
+        15,
+        4
+      ]
+    },
+    {
+      "agent_id": "agent_6",
+      "position": [
+        15,
+        8
+      ]
+    }
+  ],
+  "items": [
+    {
+      "item_id": "box_1",
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_a",
+      "dropoff_id": "dropoff_d"
+    },
+    {
+      "item_id": "box_2",
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_b",
+      "dropoff_id": "dropoff_e"
+    },
+    {
+      "item_id": "box_3",
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_c",
+      "dropoff_id": "dropoff_f"
+    },
+    {
+      "item_id": "box_4",
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_d",
+      "dropoff_id": "dropoff_a"
+    },
+    {
+      "item_id": "box_5",
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_b"
+    },
+    {
+      "item_id": "box_6",
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_c"
+    },
+    {
+      "item_id": "box_7",
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_a",
+      "dropoff_id": "dropoff_c"
+    },
+    {
+      "item_id": "box_8",
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_b",
+      "dropoff_id": "dropoff_d"
+    },
+    {
+      "item_id": "box_9",
+      "task_id": "delivery_9",
+      "pickup_id": "pickup_c",
+      "dropoff_id": "dropoff_e"
+    },
+    {
+      "item_id": "box_10",
+      "task_id": "delivery_10",
+      "pickup_id": "pickup_d",
+      "dropoff_id": "dropoff_f"
+    },
+    {
+      "item_id": "box_11",
+      "task_id": "delivery_11",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_a"
+    },
+    {
+      "item_id": "box_12",
+      "task_id": "delivery_12",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_b"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_a",
+      "dropoff_id": "dropoff_d",
+      "item_id": "box_1"
+    },
+    {
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_b",
+      "dropoff_id": "dropoff_e",
+      "item_id": "box_2"
+    },
+    {
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_c",
+      "dropoff_id": "dropoff_f",
+      "item_id": "box_3"
+    },
+    {
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_d",
+      "dropoff_id": "dropoff_a",
+      "item_id": "box_4"
+    },
+    {
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_b",
+      "item_id": "box_5"
+    },
+    {
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_c",
+      "item_id": "box_6"
+    },
+    {
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_a",
+      "dropoff_id": "dropoff_c",
+      "item_id": "box_7"
+    },
+    {
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_b",
+      "dropoff_id": "dropoff_d",
+      "item_id": "box_8"
+    },
+    {
+      "task_id": "delivery_9",
+      "pickup_id": "pickup_c",
+      "dropoff_id": "dropoff_e",
+      "item_id": "box_9"
+    },
+    {
+      "task_id": "delivery_10",
+      "pickup_id": "pickup_d",
+      "dropoff_id": "dropoff_f",
+      "item_id": "box_10"
+    },
+    {
+      "task_id": "delivery_11",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_a",
+      "item_id": "box_11"
+    },
+    {
+      "task_id": "delivery_12",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_b",
+      "item_id": "box_12"
+    }
+  ],
+  "default_seed": 107,
+  "config": {
+    "perception_radius": 3,
+    "allocation_strategy": "nearest_available",
+    "routing_strategy": "local_memory_astar",
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.0,
+      "gamma_failed_route": 1.8,
+      "delta_uncertainty": 0.25,
+      "near_optimal_margin": 0.35
+    },
+    "congestion": {
+      "decay": 0.85,
+      "nearby_agent_weight": 1.5,
+      "waiting_weight": 0.9,
+      "failed_move_weight": 1.2,
+      "blocked_path_weight": 1.0,
+      "path_padding": 1
+    }
+  }
+}

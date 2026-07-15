@@ -1,0 +1,48 @@
+{
+  "scenario_id": "one_agent_spiral_escape",
+  "name": "One Agent Spiral Escape",
+  "description": "One agent starts near the center, picks up an adjacent item, and must follow a spiral corridor out to the delivery area.",
+  "grid": {
+    "width": 11,
+    "height": 11,
+    "blocked": [
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
+      [0, 1], [10, 1],
+      [0, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2], [8, 2], [10, 2],
+      [0, 3], [2, 3], [8, 3], [10, 3],
+      [0, 4], [2, 4], [4, 4], [5, 4], [6, 4], [8, 4], [10, 4],
+      [0, 5], [2, 5], [4, 5], [6, 5], [8, 5], [10, 5],
+      [0, 6], [2, 6], [4, 6], [6, 6], [8, 6], [10, 6],
+      [0, 7], [2, 7], [4, 7], [8, 7], [10, 7],
+      [0, 8], [2, 8], [4, 8], [5, 8], [6, 8], [7, 8], [8, 8], [10, 8],
+      [0, 9], [2, 9], [10, 9],
+      [0, 10], [1, 10], [2, 10], [3, 10], [4, 10], [5, 10], [6, 10], [7, 10], [8, 10], [9, 10], [10, 10]
+    ]
+  },
+  "pickups": {
+    "pickup_center": [5, 5]
+  },
+  "dropoffs": {
+    "dropoff_exit": [1, 9]
+  },
+  "agents": [
+    {"agent_id": "agent_1", "position": [5, 6]}
+  ],
+  "items": [
+    {"item_id": "box_spiral", "task_id": "delivery_spiral", "pickup_id": "pickup_center", "dropoff_id": "dropoff_exit"}
+  ],
+  "tasks": [
+    {"task_id": "delivery_spiral", "pickup_id": "pickup_center", "dropoff_id": "dropoff_exit", "item_id": "box_spiral"}
+  ],
+  "default_seed": 51,
+  "config": {
+    "perception_radius": 2,
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.0,
+      "gamma_failed_route": 2.0,
+      "delta_uncertainty": 0.2,
+      "near_optimal_margin": 0.35
+    }
+  }
+}

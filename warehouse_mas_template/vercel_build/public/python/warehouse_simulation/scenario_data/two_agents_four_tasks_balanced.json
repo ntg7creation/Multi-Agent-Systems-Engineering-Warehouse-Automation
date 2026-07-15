@@ -1,204 +1,98 @@
 {
-  "scenario_id": "four_agents_adjacent_access_cluster",
-  "name": "Four Agents, Obstacle-Surrounded Access Points",
-  "description": "Four agents serve pickup and delivery cells that are mostly surrounded by obstacles. Every interaction must happen from the one valid adjacent access cell, testing correct pickup and placement rules under multi-agent pressure.",
+  "scenario_id": "two_agents_four_tasks_balanced",
+  "name": "Two Agents, Four Balanced Tasks",
+  "description": "Two agents begin near the center and should divide a balanced four-task workload while sharing two shelf openings.",
   "grid": {
-    "width": 16,
-    "height": 10,
+    "width": 14,
+    "height": 8,
     "blocked": [
       [
-        0,
-        5
-      ],
-      [
-        1,
-        2
-      ],
-      [
-        1,
-        4
-      ],
-      [
-        1,
-        6
-      ],
-      [
-        2,
+        5,
         1
-      ],
-      [
-        2,
-        3
-      ],
-      [
-        3,
-        7
-      ],
-      [
-        4,
-        8
       ],
       [
         5,
-        7
-      ],
-      [
-        6,
-        1
-      ],
-      [
-        6,
         2
       ],
       [
-        6,
-        4
+        5,
+        3
       ],
       [
-        6,
+        5,
         5
       ],
       [
-        6,
-        8
+        5,
+        6
       ],
       [
-        7,
+        9,
         1
       ],
       [
-        7,
-        5
+        9,
+        3
       ],
       [
-        8,
-        2
-      ],
-      [
-        8,
+        9,
         4
       ],
       [
         9,
-        5
-      ],
-      [
-        10,
         6
-      ],
-      [
-        10,
-        8
-      ],
-      [
-        11,
-        1
-      ],
-      [
-        11,
-        4
-      ],
-      [
-        11,
-        5
-      ],
-      [
-        11,
-        7
-      ],
-      [
-        11,
-        8
-      ],
-      [
-        12,
-        1
-      ],
-      [
-        12,
-        3
-      ],
-      [
-        13,
-        2
-      ],
-      [
-        13,
-        7
-      ],
-      [
-        14,
-        8
-      ],
-      [
-        15,
-        7
       ]
     ]
   },
   "pickups": {
     "pickup_a": [
-      2,
-      2
+      1,
+      1
     ],
     "pickup_b": [
-      7,
-      2
+      1,
+      6
     ],
     "pickup_c": [
-      12,
-      2
+      6,
+      4
     ],
     "pickup_d": [
-      4,
+      10,
       7
     ]
   },
   "dropoffs": {
     "dropoff_a": [
-      10,
-      7
+      12,
+      1
     ],
     "dropoff_b": [
-      14,
-      7
+      12,
+      6
     ],
     "dropoff_c": [
-      8,
-      5
+      10,
+      3
     ],
     "dropoff_d": [
-      1,
-      5
+      2,
+      4
     ]
   },
   "agents": [
     {
       "agent_id": "agent_1",
       "position": [
-        1,
-        1
+        3,
+        2
       ]
     },
     {
       "agent_id": "agent_2",
       "position": [
-        5,
-        5
-      ]
-    },
-    {
-      "agent_id": "agent_3",
-      "position": [
-        10,
-        3
-      ]
-    },
-    {
-      "agent_id": "agent_4",
-      "position": [
-        15,
-        8
+        3,
+        6
       ]
     }
   ],
@@ -254,7 +148,7 @@
       "item_id": "box_4"
     }
   ],
-  "default_seed": 113,
+  "default_seed": 71,
   "config": {
     "perception_radius": 3,
     "allocation_strategy": "nearest_available",
@@ -275,7 +169,4 @@
       "path_padding": 1
     }
   }
-  
 }
-
-

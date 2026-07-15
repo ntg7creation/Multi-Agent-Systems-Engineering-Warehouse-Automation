@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/2d", "destination": "/index.html" },
+    { "source": "/3d", "destination": "/index.html" }
+  ]
+}

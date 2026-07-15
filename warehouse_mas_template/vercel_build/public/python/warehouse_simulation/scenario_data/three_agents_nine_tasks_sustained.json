@@ -1,74 +1,38 @@
 {
-  "scenario_id": "four_agents_adjacent_access_cluster",
-  "name": "Four Agents, Obstacle-Surrounded Access Points",
-  "description": "Four agents serve pickup and delivery cells that are mostly surrounded by obstacles. Every interaction must happen from the one valid adjacent access cell, testing correct pickup and placement rules under multi-agent pressure.",
+  "scenario_id": "three_agents_nine_tasks_sustained",
+  "name": "Three Agents, Nine Sustained Deliveries",
+  "description": "A sustained medium-load scenario with three agents and nine deliveries distributed across several shelf zones.",
   "grid": {
-    "width": 16,
+    "width": 19,
     "height": 10,
     "blocked": [
       [
-        0,
-        5
-      ],
-      [
-        1,
-        2
-      ],
-      [
-        1,
-        4
-      ],
-      [
-        1,
-        6
-      ],
-      [
-        2,
+        4,
         1
       ],
       [
-        2,
+        4,
         3
       ],
       [
-        3,
-        7
+        4,
+        4
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        6
       ],
       [
         4,
         8
       ],
       [
-        5,
-        7
-      ],
-      [
-        6,
+        8,
         1
-      ],
-      [
-        6,
-        2
-      ],
-      [
-        6,
-        4
-      ],
-      [
-        6,
-        5
-      ],
-      [
-        6,
-        8
-      ],
-      [
-        7,
-        1
-      ],
-      [
-        7,
-        5
       ],
       [
         8,
@@ -76,129 +40,162 @@
       ],
       [
         8,
-        4
+        3
       ],
       [
-        9,
+        8,
         5
       ],
       [
-        10,
+        8,
         6
       ],
       [
-        10,
-        8
-      ],
-      [
-        11,
-        1
-      ],
-      [
-        11,
-        4
-      ],
-      [
-        11,
-        5
-      ],
-      [
-        11,
+        8,
         7
       ],
       [
-        11,
-        8
-      ],
-      [
         12,
-        1
+        2
       ],
       [
         12,
         3
       ],
       [
-        13,
-        2
+        12,
+        4
       ],
       [
-        13,
+        12,
+        6
+      ],
+      [
+        12,
         7
-      ],
-      [
-        14,
-        8
       ],
       [
         15,
-        7
+        1
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        4
+      ],
+      [
+        15,
+        5
+      ],
+      [
+        15,
+        6
+      ],
+      [
+        15,
+        8
       ]
     ]
   },
   "pickups": {
     "pickup_a": [
-      2,
-      2
+      1,
+      1
     ],
     "pickup_b": [
-      7,
-      2
+      1,
+      4
     ],
     "pickup_c": [
-      12,
-      2
+      1,
+      8
     ],
     "pickup_d": [
-      4,
+      5,
+      2
+    ],
+    "pickup_e": [
+      5,
       7
+    ],
+    "pickup_f": [
+      9,
+      4
+    ],
+    "pickup_g": [
+      9,
+      8
+    ],
+    "pickup_h": [
+      13,
+      2
+    ],
+    "pickup_i": [
+      16,
+      6
     ]
   },
   "dropoffs": {
     "dropoff_a": [
+      17,
+      1
+    ],
+    "dropoff_b": [
+      17,
+      4
+    ],
+    "dropoff_c": [
+      17,
+      8
+    ],
+    "dropoff_d": [
+      14,
+      6
+    ],
+    "dropoff_e": [
+      10,
+      1
+    ],
+    "dropoff_f": [
       10,
       7
     ],
-    "dropoff_b": [
-      14,
+    "dropoff_g": [
+      6,
+      5
+    ],
+    "dropoff_h": [
+      2,
       7
     ],
-    "dropoff_c": [
-      8,
-      5
-    ],
-    "dropoff_d": [
-      1,
-      5
+    "dropoff_i": [
+      2,
+      2
     ]
   },
   "agents": [
     {
       "agent_id": "agent_1",
       "position": [
-        1,
-        1
+        2,
+        3
       ]
     },
     {
       "agent_id": "agent_2",
       "position": [
-        5,
-        5
+        7,
+        6
       ]
     },
     {
       "agent_id": "agent_3",
       "position": [
-        10,
-        3
-      ]
-    },
-    {
-      "agent_id": "agent_4",
-      "position": [
-        15,
-        8
+        14,
+        4
       ]
     }
   ],
@@ -226,6 +223,36 @@
       "task_id": "delivery_4",
       "pickup_id": "pickup_d",
       "dropoff_id": "dropoff_d"
+    },
+    {
+      "item_id": "box_5",
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_e"
+    },
+    {
+      "item_id": "box_6",
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_f"
+    },
+    {
+      "item_id": "box_7",
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_g",
+      "dropoff_id": "dropoff_g"
+    },
+    {
+      "item_id": "box_8",
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_h",
+      "dropoff_id": "dropoff_h"
+    },
+    {
+      "item_id": "box_9",
+      "task_id": "delivery_9",
+      "pickup_id": "pickup_i",
+      "dropoff_id": "dropoff_i"
     }
   ],
   "tasks": [
@@ -252,9 +279,39 @@
       "pickup_id": "pickup_d",
       "dropoff_id": "dropoff_d",
       "item_id": "box_4"
+    },
+    {
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_e",
+      "dropoff_id": "dropoff_e",
+      "item_id": "box_5"
+    },
+    {
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_f",
+      "dropoff_id": "dropoff_f",
+      "item_id": "box_6"
+    },
+    {
+      "task_id": "delivery_7",
+      "pickup_id": "pickup_g",
+      "dropoff_id": "dropoff_g",
+      "item_id": "box_7"
+    },
+    {
+      "task_id": "delivery_8",
+      "pickup_id": "pickup_h",
+      "dropoff_id": "dropoff_h",
+      "item_id": "box_8"
+    },
+    {
+      "task_id": "delivery_9",
+      "pickup_id": "pickup_i",
+      "dropoff_id": "dropoff_i",
+      "item_id": "box_9"
     }
   ],
-  "default_seed": 113,
+  "default_seed": 79,
   "config": {
     "perception_radius": 3,
     "allocation_strategy": "nearest_available",
@@ -275,7 +332,4 @@
       "path_padding": 1
     }
   }
-  
 }
-
-

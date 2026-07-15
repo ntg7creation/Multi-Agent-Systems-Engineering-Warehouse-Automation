@@ -1,0 +1,29 @@
+{
+  "scenario_id": "simple_one_agent_delivery",
+  "name": "Simple One-Agent Delivery",
+  "description": "One agent completes one delivery in an open warehouse.",
+  "grid": {
+    "width": 10,
+    "height": 6,
+    "blocked": [[4, 2], [4, 3]]
+  },
+  "pickups": {
+    "pickup_a": [1, 1]
+  },
+  "dropoffs": {
+    "dropoff_a": [8, 4]
+  },
+  "agents": [
+    {"agent_id": "agent_1", "position": [2, 1]}
+  ],
+  "items": [
+    {"item_id": "box_1", "task_id": "delivery_1", "pickup_id": "pickup_a", "dropoff_id": "dropoff_a"}
+  ],
+  "tasks": [
+    {"task_id": "delivery_1", "pickup_id": "pickup_a", "dropoff_id": "dropoff_a", "item_id": "box_1"}
+  ],
+  "default_seed": 7,
+  "config": {
+    "perception_radius": 3
+  }
+}

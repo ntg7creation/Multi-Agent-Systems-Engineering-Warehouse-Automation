@@ -1,0 +1,756 @@
+{
+  "scenario_id": "six_agents_corridor_passing_bays",
+  "name": "Six Agents, Corridor With Passing Bays",
+  "description": "Six agents exchange deliveries through one long shared corridor. Small side bays create legal places to wait and yield, making this a strong deadlock and priority-resolution test.",
+  "grid": {
+    "width": 21,
+    "height": 9,
+    "blocked": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        0,
+        5
+      ],
+      [
+        0,
+        6
+      ],
+      [
+        0,
+        7
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        7
+      ],
+      [
+        1,
+        8
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
+        7
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        3,
+        7
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        4,
+        7
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        2
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        5,
+        5
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        1
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        6,
+        3
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        6,
+        8
+      ],
+      [
+        7,
+        0
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        7,
+        2
+      ],
+      [
+        7,
+        3
+      ],
+      [
+        7,
+        5
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        8,
+        1
+      ],
+      [
+        8,
+        2
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        3
+      ],
+      [
+        9,
+        5
+      ],
+      [
+        9,
+        6
+      ],
+      [
+        9,
+        7
+      ],
+      [
+        9,
+        8
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        10,
+        1
+      ],
+      [
+        10,
+        2
+      ],
+      [
+        10,
+        3
+      ],
+      [
+        10,
+        5
+      ],
+      [
+        10,
+        6
+      ],
+      [
+        10,
+        7
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        11,
+        0
+      ],
+      [
+        11,
+        1
+      ],
+      [
+        11,
+        2
+      ],
+      [
+        11,
+        3
+      ],
+      [
+        11,
+        5
+      ],
+      [
+        11,
+        6
+      ],
+      [
+        11,
+        7
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        12,
+        0
+      ],
+      [
+        12,
+        1
+      ],
+      [
+        12,
+        2
+      ],
+      [
+        12,
+        6
+      ],
+      [
+        12,
+        7
+      ],
+      [
+        12,
+        8
+      ],
+      [
+        13,
+        0
+      ],
+      [
+        13,
+        1
+      ],
+      [
+        13,
+        2
+      ],
+      [
+        13,
+        3
+      ],
+      [
+        13,
+        5
+      ],
+      [
+        13,
+        6
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        13,
+        8
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        14,
+        1
+      ],
+      [
+        14,
+        2
+      ],
+      [
+        14,
+        3
+      ],
+      [
+        14,
+        5
+      ],
+      [
+        14,
+        6
+      ],
+      [
+        14,
+        7
+      ],
+      [
+        14,
+        8
+      ],
+      [
+        15,
+        0
+      ],
+      [
+        15,
+        1
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        15,
+        5
+      ],
+      [
+        15,
+        6
+      ],
+      [
+        15,
+        7
+      ],
+      [
+        15,
+        8
+      ],
+      [
+        16,
+        0
+      ],
+      [
+        16,
+        1
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        16,
+        6
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        8
+      ],
+      [
+        17,
+        0
+      ],
+      [
+        17,
+        1
+      ],
+      [
+        17,
+        7
+      ],
+      [
+        17,
+        8
+      ],
+      [
+        18,
+        0
+      ],
+      [
+        18,
+        1
+      ],
+      [
+        18,
+        7
+      ],
+      [
+        18,
+        8
+      ],
+      [
+        19,
+        0
+      ],
+      [
+        19,
+        1
+      ],
+      [
+        19,
+        7
+      ],
+      [
+        19,
+        8
+      ],
+      [
+        20,
+        0
+      ],
+      [
+        20,
+        1
+      ],
+      [
+        20,
+        2
+      ],
+      [
+        20,
+        3
+      ],
+      [
+        20,
+        4
+      ],
+      [
+        20,
+        5
+      ],
+      [
+        20,
+        6
+      ],
+      [
+        20,
+        7
+      ],
+      [
+        20,
+        8
+      ]
+    ]
+  },
+  "pickups": {
+    "pickup_l1": [
+      1,
+      2
+    ],
+    "pickup_l2": [
+      2,
+      2
+    ],
+    "pickup_l3": [
+      3,
+      2
+    ],
+    "pickup_r1": [
+      19,
+      6
+    ],
+    "pickup_r2": [
+      18,
+      6
+    ],
+    "pickup_r3": [
+      17,
+      6
+    ]
+  },
+  "dropoffs": {
+    "dropoff_l1": [
+      1,
+      6
+    ],
+    "dropoff_l2": [
+      2,
+      6
+    ],
+    "dropoff_l3": [
+      3,
+      6
+    ],
+    "dropoff_r1": [
+      19,
+      2
+    ],
+    "dropoff_r2": [
+      18,
+      2
+    ],
+    "dropoff_r3": [
+      17,
+      2
+    ]
+  },
+  "agents": [
+    {
+      "agent_id": "agent_1",
+      "position": [
+        5,
+        4
+      ]
+    },
+    {
+      "agent_id": "agent_2",
+      "position": [
+        7,
+        4
+      ]
+    },
+    {
+      "agent_id": "agent_3",
+      "position": [
+        9,
+        4
+      ]
+    },
+    {
+      "agent_id": "agent_4",
+      "position": [
+        11,
+        4
+      ]
+    },
+    {
+      "agent_id": "agent_5",
+      "position": [
+        13,
+        4
+      ]
+    },
+    {
+      "agent_id": "agent_6",
+      "position": [
+        15,
+        4
+      ]
+    }
+  ],
+  "items": [
+    {
+      "item_id": "box_1",
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_l1",
+      "dropoff_id": "dropoff_r1"
+    },
+    {
+      "item_id": "box_2",
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_l2",
+      "dropoff_id": "dropoff_r2"
+    },
+    {
+      "item_id": "box_3",
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_l3",
+      "dropoff_id": "dropoff_r3"
+    },
+    {
+      "item_id": "box_4",
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_r1",
+      "dropoff_id": "dropoff_l1"
+    },
+    {
+      "item_id": "box_5",
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_r2",
+      "dropoff_id": "dropoff_l2"
+    },
+    {
+      "item_id": "box_6",
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_r3",
+      "dropoff_id": "dropoff_l3"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "delivery_1",
+      "pickup_id": "pickup_l1",
+      "dropoff_id": "dropoff_r1",
+      "item_id": "box_1"
+    },
+    {
+      "task_id": "delivery_2",
+      "pickup_id": "pickup_l2",
+      "dropoff_id": "dropoff_r2",
+      "item_id": "box_2"
+    },
+    {
+      "task_id": "delivery_3",
+      "pickup_id": "pickup_l3",
+      "dropoff_id": "dropoff_r3",
+      "item_id": "box_3"
+    },
+    {
+      "task_id": "delivery_4",
+      "pickup_id": "pickup_r1",
+      "dropoff_id": "dropoff_l1",
+      "item_id": "box_4"
+    },
+    {
+      "task_id": "delivery_5",
+      "pickup_id": "pickup_r2",
+      "dropoff_id": "dropoff_l2",
+      "item_id": "box_5"
+    },
+    {
+      "task_id": "delivery_6",
+      "pickup_id": "pickup_r3",
+      "dropoff_id": "dropoff_l3",
+      "item_id": "box_6"
+    }
+  ],
+  "default_seed": 101,
+  "config": {
+    "perception_radius": 4,
+    "allocation_strategy": "nearest_available",
+    "routing_strategy": "local_memory_astar",
+    "path_weights": {
+      "alpha_distance": 1.0,
+      "beta_congestion": 2.0,
+      "gamma_failed_route": 1.8,
+      "delta_uncertainty": 0.25,
+      "near_optimal_margin": 0.35
+    },
+    "congestion": {
+      "decay": 0.85,
+      "nearby_agent_weight": 1.5,
+      "waiting_weight": 0.9,
+      "failed_move_weight": 1.2,
+      "blocked_path_weight": 1.0,
+      "path_padding": 1
+    }
+  }
+}
